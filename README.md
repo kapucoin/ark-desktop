@@ -28,6 +28,7 @@ Second signature supported. Multisignature accounts not yet supported.
 ## Screenshots
 ![linux](http://i.imgur.com/snJi21i.jpg)
 ![linux](http://i.imgur.com/gjjqw88.jpg)
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fkapucoin%2Fkapu-desktop.svg?type=shield)](https://app.fossa.io/projects/git%2Bgithub.com%2Fkapucoin%2Fkapu-desktop?ref=badge_shield)
 
 ## From code
 
@@ -71,3 +72,6 @@ brew bundle
 - Guillaume Verbal <doweig@ark.io>
 
 ### License [MIT](LICENSE.md) copyright (c) 2016 KAPU, copyright (c) 2016 fx thoorens
+
+
+[![FOSSA Status](https://app.fossa.io/api/projects/git%2Bgithub.com%2Fkapucoin%2Fkapu-desktop.svg?type=large)](https://app.fossa.io/projects/git%2Bgithub.com%2Fkapucoin%2Fkapu-desktop?ref=badge_large)
