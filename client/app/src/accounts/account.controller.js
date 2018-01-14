@@ -65,32 +65,32 @@
     var self = this
 
     var languages = {
-      en:gettextCatalog.getString("English"),
-      zh_CN:gettextCatalog.getString("Chinese simplified"),
-      zh_TW:gettextCatalog.getString("Chinese traditional"),
-      fr:gettextCatalog.getString("French"),
-      el:gettextCatalog.getString("Greek"),
-      nl:gettextCatalog.getString("Dutch"),
-      ar:gettextCatalog.getString("Arab"),
-      pl:gettextCatalog.getString("Polish"),
-      pt_BR:gettextCatalog.getString("Portuguese"),
-      bg_BG:gettextCatalog.getString("Bulgarian"),
-      hu:gettextCatalog.getString("Hungarish"),
-      sl:gettextCatalog.getString("Slovenian"),
-      ro:gettextCatalog.getString("Romanian"),
-      de:gettextCatalog.getString("German"),
-      it:gettextCatalog.getString("Italian"),
-      id:gettextCatalog.getString("Indonesian"),
-      ru:gettextCatalog.getString("Russian")
-    };
+      en: gettextCatalog.getString('English'),
+      zh_CN: gettextCatalog.getString('Chinese simplified'),
+      zh_TW: gettextCatalog.getString('Chinese traditional'),
+      fr: gettextCatalog.getString('French'),
+      el: gettextCatalog.getString('Greek'),
+      nl: gettextCatalog.getString('Dutch'),
+      ar: gettextCatalog.getString('Arab'),
+      pl: gettextCatalog.getString('Polish'),
+      pt_BR: gettextCatalog.getString('Portuguese'),
+      bg_BG: gettextCatalog.getString('Bulgarian'),
+      hu: gettextCatalog.getString('Hungarish'),
+      sl: gettextCatalog.getString('Slovenian'),
+      ro: gettextCatalog.getString('Romanian'),
+      de: gettextCatalog.getString('German'),
+      it: gettextCatalog.getString('Italian'),
+      id: gettextCatalog.getString('Indonesian'),
+      ru: gettextCatalog.getString('Russian')
+    }
 
     pluginLoader.triggerEvent('onStart')
 
     self.currencies = [
-      { name: "usd", symbol: "$" },
-      { name: "btc", symbol: "Ƀ" },
-      { name: "eur", symbol: "€" }
-    ];
+      { name: 'usd', symbol: '$' },
+      { name: 'btc', symbol: 'Ƀ' },
+      { name: 'eur', symbol: '€' }
+    ]
 
     gettextCatalog.debug = false
     self.language = storageService.get('language') || 'en'

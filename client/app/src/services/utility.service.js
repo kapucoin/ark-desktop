@@ -2,16 +2,16 @@
   'use strict'
 
   angular.module('arkclient.services')
-    .service('utilityService', ['KAPUTOSHI_UNIT', 'KAPU_LAUNCH_DATE', UtilityService])
+    .service('utilityService', ['ARKTOSHI_UNIT', 'ARK_LAUNCH_DATE', UtilityService])
 
   // this service should not have any dependencies to other services!
-  function UtilityService (KAPUTOSHI_UNIT, KAPU_LAUNCH_DATE) {
+  function UtilityService (ARKTOSHI_UNIT, ARK_LAUNCH_DATE) {
     function arktoshiToArk (amount, keepPrecise, numberOfDecimals) {
       if (!amount) {
         return 0
       }
 
-      let ark = amount / KAPUTOSHI_UNIT
+      let ark = amount / ARKTOSHI_UNIT
 
       if (!keepPrecise) {
         ark = numberToFixed(ark)
@@ -34,7 +34,7 @@
         return 0
       }
 
-      const ark = amount * KAPUTOSHI_UNIT
+      const ark = amount * ARKTOSHI_UNIT
       return typeof numberOfDecimals !== 'number' ? ark : ark.toFixed(numberOfDecimals)
     }
 
@@ -69,7 +69,7 @@
 
       date = new Date(date.toUTCString())
 
-      const timestamp = parseInt((date.getTime() - KAPU_LAUNCH_DATE.getTime()) / 1000)
+      const timestamp = parseInt((date.getTime() - ARK_LAUNCH_DATE.getTime()) / 1000)
       return timestamp < 0 ? null : timestamp
     }
 
@@ -78,7 +78,7 @@
         return null
       }
 
-      var arkLaunchTime = parseInt(KAPU_LAUNCH_DATE.getTime() / 1000)
+      var arkLaunchTime = parseInt(ARK_LAUNCH_DATE.getTime() / 1000)
 
       return new Date((arkRelativeTimeStamp + arkLaunchTime) * 1000)
     }

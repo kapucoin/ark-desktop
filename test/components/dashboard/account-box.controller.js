@@ -3,38 +3,40 @@
 describe('AccountBoxController', function () {
   const expect = chai.expect
 
-  let ctrl
+  let ctrl, ARKTOSHI_UNIT, accounts, bindings
 
-  const KAPUTOSHI_UNIT = 100000000
-  const accounts = [
-    { balance: 10 * KAPUTOSHI_UNIT },
-    { balance: 15 * KAPUTOSHI_UNIT },
-    { balance: 5 * KAPUTOSHI_UNIT },
-    {}
-  ]
-
-  const bindings = {
-    accountCtrl: {
-      getAllAccounts () { return accounts },
-      currency: {
-        name: 'btc'
-      },
-      connectedPeer: {
-        market: {
-          price: {
-            btc: '0.1' // Next year price? lol
-          }
-        }
-      }
-    }
-  }
+  beforeEach(module('arkclient.constants'));
 
   beforeEach(() => {
     module('arkclient.components', $provide => {
-      $provide.value('KAPUTOSHI_UNIT', Math.pow(10, 8))
     })
 
-    inject(_$componentController_ => {
+    inject((_$componentController_, _ARKTOSHI_UNIT_) => {
+
+      ARKTOSHI_UNIT = _ARKTOSHI_UNIT_
+      accounts = [
+        { balance: 10 * ARKTOSHI_UNIT },
+        { balance: 15 * ARKTOSHI_UNIT },
+        { balance: 5 * ARKTOSHI_UNIT },
+        {}
+      ]
+
+      bindings = {
+        accountCtrl: {
+          getAllAccounts () { return accounts },
+          currency: {
+            name: 'btc'
+          },
+          connectedPeer: {
+            market: {
+              price: {
+                btc: '0.1' // Next year price? lol
+              }
+            }
+          }
+        }
+      }
+
       ctrl = _$componentController_('accountBox', null, bindings)
     })
   })
@@ -69,10 +71,10 @@ describe('AccountBoxController', function () {
       it('updates the balance', function () {
         expect(ctrl.myAccountsBalance()).to.equal('30.00')
         sinon.stub(bindings.accountCtrl, 'getAllAccounts').returns([
-          { balance: 1 * KAPUTOSHI_UNIT },
-          { balance: 17 * KAPUTOSHI_UNIT },
-          { balance: 1 * KAPUTOSHI_UNIT },
-          { balance: 1 * KAPUTOSHI_UNIT }
+          { balance: 1 * ARKTOSHI_UNIT },
+          { balance: 17 * ARKTOSHI_UNIT },
+          { balance: 1 * ARKTOSHI_UNIT },
+          { balance: 1 * ARKTOSHI_UNIT }
         ])
         ctrl.accountCtrl.refreshAccountBalances()
         expect(ctrl.myAccountsBalance()).to.equal('20.00')

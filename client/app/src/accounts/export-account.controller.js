@@ -13,11 +13,11 @@
       'gettextCatalog',
       'account',
       'theme',
-      'KAPU_LAUNCH_DATE',
+      'ARK_LAUNCH_DATE',
       ExportAccountController
     ])
 
-  function ExportAccountController ($scope, $filter, $mdDialog, accountService, toastService, utilityService, gettextCatalog, account, theme, KAPU_LAUNCH_DATE) {
+  function ExportAccountController ($scope, $filter, $mdDialog, accountService, toastService, utilityService, gettextCatalog, account, theme, ARK_LAUNCH_DATE) {
     $scope.vm = {}
     $scope.vm.account = account
     $scope.vm.theme = theme
@@ -25,7 +25,7 @@
     $scope.vm.hasStarted = false
     $scope.vm.isFinished = false
 
-    $scope.vm.minDate = KAPU_LAUNCH_DATE
+    $scope.vm.minDate = ARK_LAUNCH_DATE
 
     $scope.vm.startDate = new Date()
     $scope.vm.startDate.setMonth($scope.vm.startDate.getMonth() - 1)

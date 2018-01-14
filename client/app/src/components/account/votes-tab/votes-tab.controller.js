@@ -79,7 +79,7 @@
     }
 
     this.openBlog = (uri) => {
-      require('electron').shell.openExternal(`https://blog.ark.io${uri}`)
+      require('electron').shell.openExternal(`https://medium.com/kapucoin${uri}`)
     }
   }
 

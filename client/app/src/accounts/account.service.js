@@ -2,7 +2,7 @@
   'use strict'
 
   angular.module('arkclient.accounts')
-    .service('accountService', ['$q', '$http', 'networkService', 'storageService', 'ledgerService', 'gettextCatalog', 'utilityService', 'KAPU_LAUNCH_DATE', AccountService])
+    .service('accountService', ['$q', '$http', 'networkService', 'storageService', 'ledgerService', 'gettextCatalog', 'utilityService', 'ARK_LAUNCH_DATE', AccountService])
 
   /**
    * Accounts DataService
@@ -12,7 +12,7 @@
    * @returns {{loadAll: Function}}
    * @constructor
    */
-  function AccountService ($q, $http, networkService, storageService, ledgerService, gettextCatalog, utilityService, KAPU_LAUNCH_DATE) {
+  function AccountService ($q, $http, networkService, storageService, ledgerService, gettextCatalog, utilityService, ARK_LAUNCH_DATE) {
     var self = this
     var ark = require(require('path').resolve(__dirname, '../node_modules/arkjs'))
 
@@ -314,7 +314,7 @@
 
     // this methods only works correctly, as long as getAllTransactions returns the transactions ordered by new to old!
     function getRangedTransactions (address, startDate, endDate, onUpdate) {
-      const startStamp = utilityService.dateToArkStamp(!startDate ? KAPU_LAUNCH_DATE : startDate)
+      const startStamp = utilityService.dateToArkStamp(!startDate ? ARK_LAUNCH_DATE : startDate)
       const endStamp = utilityService.dateToArkStamp(!endDate ? new Date(new Date().setHours(23, 59, 59, 59)) : endDate)
 
       const deferred = $q.defer()

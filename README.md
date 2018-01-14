@@ -11,7 +11,7 @@
 * Hardware wallet support : Ledger Nano S.
 * Real-time currency value (updated every 5 min) in USD, EUR, BTC, HKD, JPY, CNY, AUD, GBP, Rubble, ...
 * Autoconnect to a healthy KAPU network peer. If the peer is not good anymore, it will automatically find a new one.
-* Send ark from / to any account.
+* Send kapu from / to any account.
 * Easily switch to a different network, or private chains.
 * Customized backgrounds and themes for better user experience.
 * Choose between dark or light mode.
