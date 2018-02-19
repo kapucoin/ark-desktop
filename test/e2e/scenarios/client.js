@@ -1,9 +1,10 @@
 'use strict'
 
 const electron = require('electron')
+const _path = require('path')
 
-const hooks = require('../hooks')
-const userData = require('../user_data')
+const hooks = require(_path.resolve(__dirname, '../hooks'))
+const userData = require(_path.resolve(__dirname, '../user_data'))
 
 describe('ARK Client', function () {
   hooks.createApp.bind(this)()
@@ -38,7 +39,7 @@ describe('ARK Client', function () {
         .browserWindow.isFocused().should.eventually.be.true
         .browserWindow.getBounds().should.eventually.have.property('width').and.be.above(0)
         .browserWindow.getBounds().should.eventually.have.property('height').and.be.above(0)
-        .browserWindow.getTitle().should.eventually.equal('Ark Client')
+        .browserWindow.getTitle().should.eventually.equal('Kapu Client')
     })
   })
 })

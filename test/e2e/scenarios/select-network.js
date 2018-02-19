@@ -1,6 +1,6 @@
 'use strict'
 
-const hooks = require('../hooks')
+const hooks = require(require('path').resolve(__dirname, '../hooks'))
 
 xdescribe('Select network', function () {
   hooks.createApp.bind(this)()
@@ -24,13 +24,13 @@ xdescribe('Select network', function () {
 
   context('when selecting the same network', () => {
     beforeEach(function () {
-      return this.app.client.selectNetwork('TESTNET (TESTARK)')
+      return this.app.client.selectNetwork('DEVNET (TESTKAPU)')
     })
   })
 
   context('when selecting a different network', () => {
     beforeEach(function () {
-      return this.app.client.selectNetwork('MAINNET (ARK)')
+      return this.app.client.selectNetwork('MAINNET (KAPU)')
     })
 
     describe('"My Accounts" ', () => {

@@ -1,5 +1,9 @@
+# BOUNTY Program
+ARK has a bounty program for all accepted PR (Pull Requests) for this repository
 
-Before pushing PR, please [jump in our slack #development](https://kapu-coin.slack.com) channel in order to discuss your contributions or to connect with other KAPU Developers.
+More information can be found at https://blog.ark.io/ark-github-development-bounty-113806ae9ffe
+
+Before pushing PR, please [jump in ARK slack #development](https://ark.io/slack) or [jump in our slack #development](https://kapu-coin.slack.com) channel in order to discuss your contributions or to connect with other ARK and KAPU developers.
 
 # Guidelines
  - pickup any of the existing issues or if you find an issue make a PR,

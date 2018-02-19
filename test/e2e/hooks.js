@@ -2,13 +2,13 @@
 
 const Application = require('spectron').Application
 const electron = require('electron')
-const path = require('path')
+const _path = require('path')
 
 const chai = require('chai')
 const chaiAsPromised = require('chai-as-promised')
 
-const userData = require('./user_data')
-const commands = require('./commands')
+const userData = require(_path.resolve(__dirname, './user_data'))
+const commands = require(_path.resolve(__dirname, './commands'))
 
 global.before(function () {
   chai.should()
@@ -25,7 +25,7 @@ const hooks = {
       this.app = new Application({
         path: electron,
         args: [
-          path.join(__dirname, '../..')
+          _path.join(__dirname, '../..')
         ],
         waitTimeout: timeout
       })
@@ -48,7 +48,7 @@ const hooks = {
       if (!options.useRealPath) {
         app.electron.remote.app.setPath('userData', userData.getTestPath())
       } else if (!options.ignoreDangerousWarning) {
-        console.warn('\n\tTHIS IS THE DANGEROUS PATH OF THE REAL APP!\n\tBAD THINGS COULD HAPPEN IF YOU USE IT:\n\tYOU MAY CRY AFTER LOSING YOU PRECIOUS ARKS!\n')
+        console.warn('\n\tTHIS IS THE DANGEROUS PATH OF THE REAL APP!\n\tBAD THINGS COULD HAPPEN IF YOU USE IT:\n\tYOU MAY CRY AFTER LOSING YOU PRECIOUS KAPUS!\n')
       }
 
       return app.client.waitUntilWindowLoaded()
