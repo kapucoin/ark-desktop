@@ -120,7 +120,9 @@ md-list.left-list hr {
 .md-button.md-focused:not(:hover):focus {
     background-color: transparent;
 }
-
+.md-button.md-small {
+    min-width: 35px;
+}
 md-list .md-button.selected {
     color: #03a9f4;
 }
@@ -250,6 +252,7 @@ md-toolbar h1 {
 
 md-bottom-sheet {
     padding-bottom: 130px;
+    position: fixed;
 }
 
 md-bottom-sheet md-icon {
@@ -280,6 +283,10 @@ span.name {
 .footer a {
   transition: color linear 0.2s;
   color: white;
+}
+.footer a {
+  text-decoration: underline;
+  cursor: pointer;
 }
 .footer > a:hover {
   color: rgb(198, 198, 198);
@@ -452,6 +459,12 @@ md-toast.debug .md-toast-content {
     -webkit-transform: rotateY(-180deg);
     transform: rotateY(-180deg);
     object-fit: cover;
+}
+
+/* Add a white border around the QR code to make it easier on QR Code readers to decode on dark theme */
+.md-dark-theme qrcode canvas.qrcode {
+    border: 8px solid white;
+    margin-left: -8px;
 }
 
 md-bottom-sheet button md-icon.material-icons {

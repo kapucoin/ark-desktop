@@ -58,13 +58,15 @@
     </div>
   </div>
 
-  <div ng-cloak="" style="height: 100%" layout="column">
+  <ark-qrcode style="display: none"></ark-qrcode>
+
+  <div ng-cloak="" style="height: 100%" layout="column" ng-controller="AddressbookController as ab" >
 
     <main-navbar account-ctrl="ul"></main-navbar>
 
-    <dashboard account-ctrl="ul" id="dashboard" layout="column" layout-align="space-around center" ng-if="! ul.selected" flex></dashboard>
+    <dashboard account-ctrl="ul" addressbook-ctrl="ab" id="dashboard" layout="column" layout-align="space-around center" ng-if="!ul.selected" flex></dashboard>
 
-    <div class="account-view" ng-if="ul.selected" ng-controller="AddressbookController as ab" layout="column" flex>
+    <div class="account-view" ng-if="ul.selected" layout="column" flex>
       <md-content flex layout="row">
 
         <md-sidenav ng-click="ul.toggleList()" md-is-locked-open="$mdMedia('gt-md')" md-component-id="left" class="md-whiteframe-z2">
@@ -96,6 +98,7 @@
   <link href="../node_modules/angular-material-data-table/dist/md-data-table.min.css" rel="stylesheet" type="text/css" />
   <link rel="stylesheet" href="assets/app.css" />
 
+  <script src='../node_modules/ark-qrcode/dist/arkqrcode.js'></script>
   <script src="dependencies.min.js"></script>
   <script src="src/utils/translations.js"></script>
 
@@ -106,12 +109,15 @@
   <script src="src/addons/plugin-loader.addon.js"></script>
 
   <script src="src/services/config.service.js"></script>
+  <script src="src/services/dialog.service.js"></script>
   <script src="src/services/storage.service.js"></script>
   <script src="src/services/network.service.js"></script>
   <script src="src/services/feed.service.js"></script>
   <script src="src/services/ledger.service.js"></script>
   <script src="src/services/time.service.js"></script>
   <script src="src/services/toast.service.js"></script>
+  <script src="src/services/transaction-sender.service.js"></script>
+  <script src="src/services/transaction-validator.service.js"></script>
   <script src="src/services/utility.service.js"></script>
   <script src="src/services/neo-api.service.js"></script>
 
