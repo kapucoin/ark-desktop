@@ -1,7 +1,7 @@
 ;(function () {
   'use strict'
 
-  let VotesTabController = function VotesTabController ($scope, $mdDialog, accountService, transactionBuilderService, networkService, toastService, TRANSACTION_TYPES) {
+  let VotesTabController = function VotesTabController ($scope, $mdDialog, accountService, transactionBuilderService, networkService, toastService, gettext, TRANSACTION_TYPES) {
     this.accountAddress = ''
     this.delegates = []
     this.network = networkService.getNetwork()
@@ -33,13 +33,12 @@
         resolve: {
           accountObj: () => accountObj,
           delegateToUnvote: () => delegateToUnvote,
-          passphrasesArr: () => accountService.getPassphrases(this.account.address),
           activeDelegates: () => {
             return accountService
               .getActiveDelegates()
               .then(delegates => delegates)
               .catch(() => {
-                toastService.error('Could not fetch active delegates - please check your internet connection')
+                toastService.error(gettext('Could not fetch active delegates - please check your internet connection'))
               })
           },
           currentTheme: () => this.theme

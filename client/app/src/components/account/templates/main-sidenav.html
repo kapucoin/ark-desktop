@@ -20,10 +20,8 @@
   </md-list-item>
   <md-list-item md-ink-ripple="0" md-colors="{background: (it.address === $ctrl.ul.selected.address ? 'primary' : 'background')}" ng-click="$ctrl.ul.selectAccount(it)" ng-repeat="it in $ctrl.ul.myAccounts() track by $index">
     <span style="white-space: nowrap;">
-          <md-icon ng-if="!it.delegate&&!it.cold" md-font-library="material-icons">account_balance</md-icon>
-          <md-icon ng-if="!it.delegate&&it.cold" md-font-library="material-icons">cloud_off</md-icon>
-          <md-icon ng-if="it.delegate" md-font-library="material-icons">security</md-icon>
-          {{it.username||it.address|accountLabel}}
+          <md-icon md-font-library="material-icons">{{ it.icon }}</md-icon>
+          {{it.address|accountLabel}}
         </span>
   </md-list-item>
   <md-list-item>
@@ -35,7 +33,7 @@
     <span style="white-space: nowrap;">
       <md-icon md-font-library="material-icons">account_circle</md-icon>
       {{contact.name}}
-      <md-icon ng-if="$ctrl.ul.selected" style="pointer-events: auto" ng-click="" ng-mouseover="stats = $ctrl.ab.getStats($ctrl.ul.selected.address, contact.address)" aria-label="Stats" class="md-secondary" md-menu-align-target>
+      <md-icon ng-if="$ctrl.ul.selected && contact.address !== $ctrl.ul.selected.address" style="pointer-events: auto" ng-click="" ng-mouseover="stats = $ctrl.ab.getStats($ctrl.ul.selected.address, contact.address)" aria-label="Stats" class="md-secondary" md-menu-align-target>
         info_outline
         <md-tooltip md-direction="bottom" class="tooltip-multiline">
           {{'Income' | translate}}: {{$ctrl.ul.network.symbol}}{{stats.income.amount}} ({{stats.income.transactions}} {{'Transactions' | translate | lowercase}})
@@ -46,7 +44,7 @@
     </span>
   </md-list-item>
   <md-list-item>
-    <md-button class="watch-only-address" ng-click="$ctrl.ab.addAddressbookContact()">
+    <md-button class="watch-only-address" ng-controller="AddressbookController as ab" ng-click="ab.addAddressbookContact()">
       <md-icon md-font-library="material-icons">add</md-icon>
       <translate>Add Contact</translate>
     </md-button>
