@@ -23,8 +23,8 @@ var numeral = require('numeral');
     if (!network) {
       network = switchNetwork()
     }
-    var ark = require(_path.resolve(__dirname, '../node_modules/arkjs'))
-    ark.crypto.setNetworkVersion(network.version || 23)
+    var kapujs = require(_path.resolve(__dirname, '../node_modules/kapujs'))
+    kapujs.crypto.setNetworkVersion(network.version || 23)
 
     const momentTimezone = require('moment-timezone')
     const momentRange = require('moment-range')

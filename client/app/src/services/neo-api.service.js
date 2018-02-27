@@ -5,7 +5,7 @@
     .service('neoApiService', ['$q', '$http', NeoApiService])
 
   function NeoApiService ($q, $http) {
-    const ark = require(require('path').resolve(__dirname, '../node_modules/arkjs'))
+    const kapujs = require(require('path').resolve(__dirname, '../node_modules/kapujs'))
     const baseUrl = 'https://neoscan.io/api/main_net/v1'
 
     /*
@@ -30,7 +30,7 @@
     function isValidAddress (address) {
       // since NEO addresses are the same as ARK addresses, we can use the ark validateAddress method ;)
       // however we have to "hardcode the version", since it's not "network dependant" (e.g. devNet has another version)
-      return ark.crypto.validateAddress(address, 0x17)
+      return kapujs.crypto.validateAddress(address, 0x17)
     }
 
     return {

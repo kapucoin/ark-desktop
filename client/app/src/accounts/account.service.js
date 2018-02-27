@@ -14,7 +14,7 @@
    */
   function AccountService ($q, $http, networkService, storageService, ledgerService, gettextCatalog, utilityService, ARK_LAUNCH_DATE) {
     var self = this
-    var ark = require(require('path').resolve(__dirname, '../node_modules/arkjs'))
+    var kapujs = require(require('path').resolve(__dirname, '../node_modules/kapujs'))
 
     self.defaultFees = {
       'send': 10000000,
@@ -154,8 +154,8 @@
 
     function createAccount (passphrase) {
       return new Promise((resolve, reject) => {
-        const publicKey = ark.crypto.getKeys(passphrase).publicKey
-        const address = ark.crypto.getAddress(publicKey, networkService.getNetwork().version)
+        const publicKey = kapujs.crypto.getKeys(passphrase).publicKey
+        const address = kapujs.crypto.getAddress(publicKey, networkService.getNetwork().version)
 
         fetchAccount(address).then(account => {
           if (account) {
@@ -171,7 +171,7 @@
 
     function savePassphrases (address, passphrase, secondpassphrase) {
       var deferred = $q.defer()
-      var tempaddress = ark.crypto.getAddress(ark.crypto.getKeys(passphrase).publicKey)
+      var tempaddress = kapujs.crypto.getAddress(kapujs.crypto.getKeys(passphrase).publicKey)
       if (passphrase) {
         var account = getAccount(tempaddress)
         if (account && account.address === address) {
@@ -402,7 +402,7 @@
     }
 
     function isValidAddress (address) {
-      return ark.crypto.validateAddress(address, networkService.getNetwork().version)
+      return kapujs.crypto.validateAddress(address, networkService.getNetwork().version)
     }
 
     function getDelegate (publicKey) {
@@ -502,8 +502,8 @@
       var crypto = require('crypto')
       var hash = crypto.createHash('sha256')
       hash = hash.update(Buffer.from(message, 'utf-8')).digest()
-      var ecpair = ark.ECPair.fromPublicKeyBuffer(Buffer.from(publicKey, 'hex'))
-      var ecsignature = ark.ECSignature.fromDER(Buffer.from(signature, 'hex'))
+      var ecpair = kapujs.ECPair.fromPublicKeyBuffer(Buffer.from(publicKey, 'hex'))
+      var ecsignature = kapujs.ECSignature.fromDER(Buffer.from(signature, 'hex'))
       var success = ecpair.verify(hash, ecsignature)
 
       message = gettextCatalog.getString('Error in signature processing')
@@ -520,7 +520,7 @@
       var crypto = require('crypto')
       var hash = crypto.createHash('sha256')
       hash = hash.update(Buffer.from(message, 'utf-8')).digest()
-      var ecpair = ark.crypto.getKeys(passphrase)
+      var ecpair = kapujs.crypto.getKeys(passphrase)
       deferred.resolve({ signature: ecpair.sign(hash).toDER().toString('hex') })
       return deferred.promise
     }
@@ -627,7 +627,7 @@
 
     function createVirtual (passphrase) {
       var deferred = $q.defer()
-      var address = ark.crypto.getAddress(ark.crypto.getKeys(passphrase).publicKey, networkService.getNetwork().version)
+      var address = kapujs.crypto.getAddress(kapujs.crypto.getKeys(passphrase).publicKey, networkService.getNetwork().version)
       var account = getAccount(address)
       if (account) {
         account.virtual = account.virtual || {}

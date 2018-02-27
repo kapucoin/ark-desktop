@@ -5,7 +5,7 @@
     .service('transactionBuilderService', ['$q', 'networkService', 'accountService', 'ledgerService', 'gettextCatalog', 'utilityService', TransactionBuilderService])
 
   function TransactionBuilderService ($q, networkService, accountService, ledgerService, gettextCatalog, utilityService) {
-    const ark = require(require('path').resolve(__dirname, '../node_modules/arkjs'))
+    const kapujs = require(require('path').resolve(__dirname, '../node_modules/kapujs'))
 
     function createTransaction (deferred, config, fee, createTransactionFunc, setAdditionalTransactionPropsOnLedger) {
       let transaction
@@ -27,14 +27,14 @@
         }
         ledgerService.signTransaction(config.ledger, transaction).then((result) => {
           transaction.signature = result.signature
-          transaction.id = ark.crypto.getId(transaction)
+          transaction.id = kapujs.crypto.getId(transaction)
           deferred.resolve(transaction)
         },
         (error) => deferred.reject(error))
         return
       }
 
-      if (ark.crypto.getAddress(transaction.senderPublicKey, networkService.getNetwork().version) !== config.fromAddress) {
+      if (kapujs.crypto.getAddress(transaction.senderPublicKey, networkService.getNetwork().version) !== config.fromAddress) {
         deferred.reject(gettextCatalog.getString('Passphrase is not corresponding to account ') + config.fromAddress)
         return
       }
@@ -65,7 +65,7 @@
         createTransaction(deferred,
                           config,
                           fees.send,
-                          () => ark.transaction.createTransaction(config.toAddress,
+                          () => kapujs.transaction.createTransaction(config.toAddress,
                                                                   config.amount,
                                                                   config.smartbridge,
                                                                   config.masterpassphrase,
@@ -84,7 +84,7 @@
         createTransaction(deferred,
                           config,
                           fees.secondsignature,
-                          () => ark.signature.createSignature(config.masterpassphrase, config.secondpassphrase))
+                          () => kapujs.signature.createSignature(config.masterpassphrase, config.secondpassphrase))
       })
     }
 
@@ -99,7 +99,7 @@
         createTransaction(deferred,
                           config,
                           fees.delegate,
-                          () => ark.delegate.createDelegate(config.masterpassphrase, config.username, config.secondpassphrase))
+                          () => kapujs.delegate.createDelegate(config.masterpassphrase, config.username, config.secondpassphrase))
       })
     }
 
@@ -114,7 +114,7 @@
         createTransaction(deferred,
                           config,
                           fees.vote,
-                          () => ark.vote.createVote(config.masterpassphrase, config.publicKeys.split(','), config.secondpassphrase),
+                          () => kapujs.vote.createVote(config.masterpassphrase, config.publicKeys.split(','), config.secondpassphrase),
                           (transaction) => { transaction.recipientId = config.fromAddress })
       })
     }

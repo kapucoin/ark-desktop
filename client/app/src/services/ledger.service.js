@@ -12,7 +12,7 @@
     const _path = require('path')
 
     var ipcRenderer = require('electron').ipcRenderer
-    var arkjs = require(_path.resolve(__dirname, '../node_modules/arkjs'))
+    var kapujs = require(_path.resolve(__dirname, '../node_modules/kapujs'))
     var bip39 = require(_path.resolve(__dirname, '../node_modules/bip39'))
     var async = require('async')
 
@@ -43,7 +43,7 @@
             path: localpath
           })
           if (result.address) {
-            result.address = arkjs.crypto.getAddress(result.publicKey)
+            result.address = kapujs.crypto.getAddress(result.publicKey)
             accountIndex = accountIndex + 1
             var account = storageService.get(result.address) || result
             account.ledger = localpath
@@ -91,7 +91,7 @@
     }
 
     function recoverBip44Accounts (backupLedgerPassphrase, slip44) {
-      var hdnode = arkjs.HDNode.fromSeedHex(bip39.mnemonicToSeedHex(backupLedgerPassphrase))
+      var hdnode = kapujs.HDNode.fromSeedHex(bip39.mnemonicToSeedHex(backupLedgerPassphrase))
 
       var accounts = []
       var accountIndex = 0
@@ -135,7 +135,7 @@
       })
       ipcRenderer.send('ledger', {
         action: 'signTransaction',
-        data: arkjs.crypto.getBytes(transaction, true, true).toString('hex'),
+        data: kapujs.crypto.getBytes(transaction, true, true).toString('hex'),
         path: path
       })
       return deferred.promise
