@@ -2,9 +2,9 @@
   'use strict'
 
   angular.module('arkclient.directives')
-    .directive('copyToClipboard', ['toastService', '$window', function (toastService, $window) {
-      var body = angular.element($window.document.body)
-      var textarea = angular.element('<textarea/>')
+    .directive('copyToClipboard', ['toastService', 'gettext', '$window', function (toastService, gettext, $window) {
+      const body = angular.element($window.document.body)
+      const textarea = angular.element('<textarea/>')
       textarea.css({
         position: 'fixed',
         opacity: '0'
@@ -16,13 +16,13 @@
         textarea[0].select()
 
         try {
-          var successful = document.execCommand('copy')
+          const successful = document.execCommand('copy')
           if (!successful) throw successful
           else {
-            toastService.success('Copied to clipboard', 3000)
+            toastService.success(gettext('Copied to clipboard'), 3000)
           }
         } catch (err) {
-          toastService.error('Failed to copy', 3000)
+          toastService.error(gettext('Failed to copy'), 3000)
         }
         textarea.remove()
       }
@@ -30,7 +30,7 @@
       return {
         restrict: 'A',
         link: function (scope, element, attrs) {
-          element.bind('click', function (e) {
+          element.bind('click', (e) => {
             copy(attrs.copyToClipboard)
           })
         }
