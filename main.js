@@ -1,35 +1,53 @@
-const electron = require('electron')
+const electron = require('electron') // {app, electron, protocol, BrowserWindow, ipcMain, Menu, globalShortcut}
 const elemon = require('elemon')
+const openAboutWindow = require('about-window').default
+const windowStateKeeper = require('electron-window-state')
 const _path = require('path')
 
-// Module to control application life.
 const app = electron.app
-// Module to create native browser window.
 const BrowserWindow = electron.BrowserWindow
 const ipcMain = electron.ipcMain
 const Menu = electron.Menu
-const openAboutWindow = require('about-window').default
 
 const ledger = require('ledgerco')
 const LedgerArk = require(_path.resolve(__dirname, './LedgerArk'))
 const fork = require('child_process').fork
 
-const windowStateKeeper = require('electron-window-state')
-
 // Keep a global reference of the window object, if you don't, the window will
 // be closed automatically when the JavaScript object is garbage collected.
 let mainWindow
 
-var ledgercomm
+let ledgercomm
 
 // needed to create menu/update it.
-var menu = null
-var enableScreenshotProtection = true
-var template = null
+let menu = null
+let enableScreenshotProtection = true
+let template = null
+let deeplinkingUrl = null
+
+// Force Single Instance Application
+const shouldQuit = app.makeSingleInstance((argv, workingDirectory) => {
+  // Someone tried to run a second instance, we should focus our window.
+
+  // argv: An array of the second instance’s (command line / deep linked) arguments
+  if (process.platform !== 'darwin') {
+    deeplinkingUrl = argv[2]
+    broadcastURI(deeplinkingUrl)
+  }
+
+  if (mainWindow) {
+    if (mainWindow.isMinimized()) mainWindow.restore()
+    mainWindow.focus()
+  }
+})
+
+if (shouldQuit) {
+  app.exit()
+}
 
 function createWindow () {
   // Create the browser window.t
-  var iconpath = _path.resolve(__dirname, '/client/ark.png')
+  const iconpath = _path.resolve(__dirname, '/client/ark.png')
   let {width, height} = electron.screen.getPrimaryDisplay().workAreaSize
 
   let mainWindowState = windowStateKeeper({
@@ -46,7 +64,11 @@ function createWindow () {
     mainWindow.show()
   })
 
-  var ledgerWorker = fork(`${__dirname}/ledger-worker.js`)
+  mainWindow.webContents.on('did-finish-load', () => {
+    if (deeplinkingUrl) broadcastURI(deeplinkingUrl)
+  })
+
+  const ledgerWorker = fork(`${__dirname}/ledger-worker.js`)
 
   ledgerWorker.on('message', (message) => {
     if (message.connected && !ledgercomm) {
@@ -91,7 +113,7 @@ function createWindow () {
                 event.returnValue = result
               })
               .fail((error) => {
-                var result = {
+                const result = {
                   connected: false,
                   message: error
                 }
@@ -107,7 +129,7 @@ function createWindow () {
             ledgercomm.close_async()
           }
           ledgercomm = null
-          var result = {
+          const result = {
             connected: false,
             message: 'Cannot connect to Ark application'
           }
@@ -123,7 +145,7 @@ function createWindow () {
       label: 'Application',
       submenu: [
         {
-          label: 'About KapuClient',
+          role: 'About KapuClient',
           click: () => openAboutWindow({
             icon_path: `${__dirname}/client/ark.ico`,
             package_json_dir: __dirname,
@@ -133,32 +155,62 @@ function createWindow () {
           })
         },
         { type: 'separator' },
-        { label: getScreenshotProtectionLabel(), click: () => { updateScreenshotProtectionItem() }, enabled: process.platform !== 'linux' },
-        { type: 'separator' },
-        { label: 'Minimize', click: function () { mainWindow.minimize() } },
-        { label: 'Maximize', click: function () { mainWindow.maximize() } },
-        { label: 'Full Screen', click: function () { mainWindow.setFullScreen(!mainWindow.isFullScreen()) } },
-        { type: 'separator' },
-        { label: 'Restart', accelerator: 'Command+R', click: function () { mainWindow.reload() } },
-        { label: 'Quit', accelerator: 'Command+Q', click: function () { app.quit() } }
+        { label: getScreenshotProtectionLabel(), click: () => { updateScreenshotProtectionItem() }, enabled: process.platform !== 'linux' }
       ]
     }, {
       label: 'Edit',
       submenu: [
-        { label: 'Undo', accelerator: 'CmdOrCtrl+Z', selector: 'undo:' },
-        { label: 'Redo', accelerator: 'Shift+CmdOrCtrl+Z', selector: 'redo:' },
+        { role: 'undo' },
+        { role: 'redo' },
         { type: 'separator' },
-        { label: 'Cut', accelerator: 'CmdOrCtrl+X', selector: 'cut:' },
-        { label: 'Copy', accelerator: 'CmdOrCtrl+C', selector: 'copy:' },
-        { label: 'Paste', accelerator: 'CmdOrCtrl+V', selector: 'paste:' },
-        { label: 'Select All', accelerator: 'CmdOrCtrl+A', selector: 'selectAll:' },
+        { role: 'cut' },
+        { role: 'copy' },
+        { role: 'paste' },
+        { role: 'selectall' },
         { type: 'separator' },
-        { label: 'Open Dev Tools', accelerator: 'CmdOrCtrl+D', click: function () { mainWindow.webContents.openDevTools() } },
-        { label: 'Reload App', accelerator: 'CmdOrCtrl+R', click: function () { mainWindow.webContents.reload() } },
         { label: 'Print Page', accelerator: 'CmdOrCtrl+P', click: function () { mainWindow.webContents.print({printBackground: true}) } }
+      ]
+    }, {
+      role: 'window',
+      submenu: [
+        { role: 'minimize' },
+        { role: 'close' }
+      ]
+    },
+    {
+      role: 'help',
+      submenu: [
+        {
+          label: 'Learn More',
+          click () { require('electron').shell.openExternal('https://ark.io') }
+        },
+        { label: 'Reload App', accelerator: 'Command+R', click: function () { mainWindow.reload() } },
+        { label: 'Open Dev Tools', accelerator: 'CmdOrCtrl+D', click: function () { mainWindow.webContents.openDevTools() } }
       ]
     }
   ]
+
+  if (process.platform === 'darwin') {
+    template[0] = {
+      label: app.getName(),
+      submenu: [
+        ...template[0].submenu,
+        { type: 'separator' },
+        { role: 'services', submenu: [] },
+        { type: 'separator' },
+        { role: 'hide' },
+        { role: 'hideothers' },
+        { role: 'unhide' },
+        { type: 'separator' },
+        { role: 'quit' }
+      ]
+    }
+    template[2].submenu = [
+      { role: 'minimize' },
+      { role: 'zoom' },
+      { role: 'togglefullscreen' }
+    ]
+  }
 
   menu = Menu.buildFromTemplate(template)
   Menu.setApplicationMenu(menu)
@@ -185,15 +237,24 @@ function configureReload () {
   })
 }
 
+function shouldDisableScreenshotProtection (arugments) {
+  return arugments && arugments.some(v => v && typeof v === 'string' && v.toLowerCase() === '--disablescreenshotprotection')
+}
+
+app.setAsDefaultProtocolClient('ark', process.execPath, ['--'])
+
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
 app.on('ready', () => {
   createWindow()
-  registerShortcuts()
 
   if (process.env.LIVE_RELOAD) {
     configureReload()
+  }
+
+  if (shouldDisableScreenshotProtection(process.argv)) {
+    updateScreenshotProtectionItem()
   }
 })
 
@@ -212,6 +273,14 @@ app.on('activate', () => {
   if (mainWindow === null) {
     createWindow()
   }
+})
+
+app.on('open-url', (event, url) => {
+  // Protocol handler for osx
+  event.preventDefault()
+  deeplinkingUrl = url
+
+  broadcastURI(deeplinkingUrl)
 })
 
 // enables/disables and updates the screen shot protection item menu
@@ -242,14 +311,8 @@ function getScreenshotProtectionLabel () {
   }
 }
 
-function registerShortcuts () {
-  if (process.platform === 'darwin') {
-    electron.globalShortcut.register('CommandOrControl+H', hideApp)
-  }
-}
+function broadcastURI (uri) {
+  if (!uri || typeof uri !== 'string') return
 
-function hideApp () {
-  electron.app.hide()
+  if (mainWindow && mainWindow.webContents) mainWindow.webContents.send('uri', uri)
 }
-// In this file you can include the rest of your app's specific main process
-// code. You can also put them in separate files and require them here.

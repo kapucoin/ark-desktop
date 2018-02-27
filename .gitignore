@@ -1,4 +1,6 @@
 node_modules
+*.swp
+*.un~
 *.zip
 Ark\ Client-*
 .tags
