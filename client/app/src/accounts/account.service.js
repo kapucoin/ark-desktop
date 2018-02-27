@@ -2,7 +2,7 @@
   'use strict'
 
   angular.module('arkclient.accounts')
-    .service('accountService', ['$q', '$http', 'networkService', 'storageService', 'ledgerService', 'gettextCatalog', 'utilityService', 'ARK_LAUNCH_DATE', AccountService])
+    .service('accountService', ['$q', '$http', 'networkService', 'storageService', 'ledgerService', 'gettextCatalog', 'gettext', 'utilityService', 'ARK_LAUNCH_DATE', AccountService])
 
   /**
    * Accounts DataService
@@ -12,9 +12,9 @@
    * @returns {{loadAll: Function}}
    * @constructor
    */
-  function AccountService ($q, $http, networkService, storageService, ledgerService, gettextCatalog, utilityService, ARK_LAUNCH_DATE) {
-    var self = this
-    var kapujs = require(require('path').resolve(__dirname, '../node_modules/kapujs'))
+  function AccountService ($q, $http, networkService, storageService, ledgerService, gettextCatalog, gettext, utilityService, ARK_LAUNCH_DATE) {
+    const self = this
+    const kapujs = require(require('path').resolve(__dirname, '../node_modules/kapujs'))
 
     self.defaultFees = {
       'send': 10000000,
@@ -27,11 +27,11 @@
     self.cachedFees = null
 
     self.TxTypes = {
-      0: 'Send Ark',
-      1: 'Second Signature Creation',
-      2: 'Delegate Registration',
-      3: 'Vote',
-      4: 'Multisignature Creation'
+      0: gettext('Send {{ currency }}'),
+      1: gettext('Second Signature Creation'),
+      2: gettext('Delegate Registration'),
+      3: gettext('Vote'),
+      4: gettext('Multisignature Creation')
     }
 
     self.peer = networkService.getPeer().ip
@@ -39,8 +39,8 @@
     function showTimestamp (timestamp) { // eslint-disable-line no-unused-vars
       const date = utilityService.arkStampToDate(timestamp)
 
-      var currentTime = new Date().getTime()
-      var diffTime = (currentTime - date.getTime()) / 1000
+      const currentTime = new Date().getTime()
+      const diffTime = (currentTime - date.getTime()) / 1000
 
       if (diffTime < 60) {
         return Math.floor(diffTime) + ' sec ago'
@@ -77,8 +77,8 @@
     }
 
     function fetchAccount (address) {
-      var deferred = $q.defer()
-      var defaultAccount = {
+      const deferred = $q.defer()
+      const defaultAccount = {
         address: address,
         balance: 0,
         secondSignature: false,
@@ -89,7 +89,7 @@
       networkService.getFromPeer('/api/accounts?address=' + address).then(
         (resp) => {
           if (resp.success) {
-            var account = resp.account
+            const account = resp.account
             account.cold = !account.publicKey
             account.delegates = []
             account.selectedVotes = []
@@ -109,11 +109,11 @@
     }
 
     function fetchAccountAndForget (address) {
-      var deferred = $q.defer()
+      const deferred = $q.defer()
       networkService.getFromPeer('/api/accounts?address=' + address).then(
         (resp) => {
           if (resp.success) {
-            var account = storageService.get(address)
+            let account = storageService.get(address)
             if (!account) {
               account = resp.account
             } else {
@@ -123,7 +123,7 @@
             account.cold = !resp.account.publicKey
             deferred.resolve(account)
           } else {
-            account = storageService.get(address)
+            let account = storageService.get(address)
             if (!account) {
               account = {
                 address: address,
@@ -169,41 +169,12 @@
       })
     }
 
-    function savePassphrases (address, passphrase, secondpassphrase) {
-      var deferred = $q.defer()
-      var tempaddress = kapujs.crypto.getAddress(kapujs.crypto.getKeys(passphrase).publicKey)
-      if (passphrase) {
-        var account = getAccount(tempaddress)
-        if (account && account.address === address) {
-          account.virtual = account.virtual || {}
-          storageService.set('virtual-' + address, account.virtual)
-          storageService.set('passphrase-' + address, passphrase)
-          storageService.set('secondpassphrase-' + address, secondpassphrase)
-          deferred.resolve(account)
-        } else {
-          deferred.reject(gettextCatalog.getString('Passphrase does not match your address'))
-        }
-      } else { // no passphrase, meaning remove all passphrases
-        storageService.set('virtual-' + address, null)
-        storageService.set('passphrase-' + address, null)
-        storageService.set('secondpassphrase-' + address, null)
-        deferred.reject(gettextCatalog.getString('Passphrases deleted'))
-      }
-
-      return deferred.promise
-    }
-
-    function getPassphrases (address) {
-      var passphrases = [storageService.get('passphrase-' + address), storageService.get('secondpassphrase-' + address)]
-      return passphrases
-    }
-
     function addWatchOnlyAddress (account) {
       if (!account || !account.address || storageService.get(account.address) || account.ledger) {
         return
       }
       storageService.set(account.address, account)
-      var addresses = storageService.get('addresses')
+      let addresses = storageService.get('addresses')
       if (!addresses) {
         addresses = []
       }
@@ -223,21 +194,19 @@
       storageService.set('voters-' + account.address, null)
       storageService.set('username-' + account.address, null)
       storageService.set('virtual-' + account.address, null)
-      storageService.set('passphrase-' + account.address, null)
-      storageService.set('secondpassphrase-' + account.address, null)
 
       // remove the address from stored addresses
-      var addresses = storageService.get('addresses')
+      const addresses = storageService.get('addresses')
       addresses.splice(addresses.indexOf(account.address), 1)
       storageService.set('addresses', addresses)
       return $q.when(account)
     }
 
     function getTransactionLabel (transaction, recipientAddress = null) {
-      var label = gettextCatalog.getString(self.TxTypes[transaction.type])
+      let label = gettextCatalog.getString(self.TxTypes[transaction.type], { currency: networkService.getNetwork().token })
 
       if (recipientAddress && transaction.recipientId === recipientAddress && transaction.type === 0) {
-        label = gettextCatalog.getString('Receive') + ' ' + networkService.getNetwork().token
+        label = gettextCatalog.getString('Receive {{ currency }}', { currency: networkService.getNetwork().token })
       }
 
       return label
@@ -262,7 +231,7 @@
     }
 
     function getFees (canUseCached) {
-      var deferred = $q.defer()
+      const deferred = $q.defer()
       if (canUseCached && self.cachedFees) {
         deferred.resolve(self.cachedFees)
         return deferred.promise
@@ -292,10 +261,10 @@
       if (!store) {
         store = true
       }
-      var deferred = $q.defer()
-      networkService.getFromPeer('/api/transactions?orderBy=timestamp:desc&offset=' + offset + '&limit=' + limit + '&recipientId=' + address + '&senderId=' + address).then(function (resp) {
+      const deferred = $q.defer()
+      networkService.getFromPeer('/api/transactions?orderBy=timestamp:desc&offset=' + offset + '&limit=' + limit + '&recipientId=' + address + '&senderId=' + address).then((resp) => {
         if (resp.success) {
-          for (var i = 0; i < resp.transactions.length; i++) {
+          for (let i = 0; i < resp.transactions.length; i++) {
             formatTransaction(resp.transactions[i], address)
           }
           if (store) storageService.set('transactions-' + address, resp.transactions)
@@ -304,9 +273,9 @@
         } else {
           deferred.reject(gettextCatalog.getString('Cannot get transactions'))
         }
-      }, function () {
+      }, () => {
         deferred.reject(gettextCatalog.getString('Cannot get transactions'))
-      }, function () {
+      }, () => {
         deferred.notify(true)
       })
       return deferred.promise
@@ -406,12 +375,12 @@
     }
 
     function getDelegate (publicKey) {
-      var deferred = $q.defer()
+      const deferred = $q.defer()
       if (!publicKey) {
         deferred.reject(gettextCatalog.getString('No publicKey'))
         return deferred.promise
       }
-      networkService.getFromPeer('/api/delegates/get/?publicKey=' + publicKey).then(function (resp) {
+      networkService.getFromPeer('/api/delegates/get/?publicKey=' + publicKey).then((resp) => {
         if (resp && resp.success && resp.delegate) {
           storageService.set('delegate-' + resp.delegate.address, resp.delegate)
           storageService.set('username-' + resp.delegate.address, resp.delegate.username)
@@ -424,8 +393,8 @@
     }
 
     function getActiveDelegates () {
-      var deferred = $q.defer()
-      networkService.getFromPeer('/api/delegates').then(function (resp) {
+      const deferred = $q.defer()
+      networkService.getFromPeer('/api/delegates').then((resp) => {
         if (resp && resp.success && resp.delegates) {
           deferred.resolve(resp.delegates)
         } else {
@@ -438,19 +407,19 @@
     }
 
     function getDelegateByUsername (username) {
-      var deferred = $q.defer()
+      const deferred = $q.defer()
       if (!username) {
         deferred.reject('No Username')
         return deferred.promise
       }
       username = username.toLowerCase()
-      networkService.getFromPeer('/api/delegates/get/?username=' + username).then(function (resp) {
+      networkService.getFromPeer('/api/delegates/get/?username=' + username).then((resp) => {
         if (resp && resp.success && resp.delegate) {
           storageService.set('delegate-' + resp.delegate.address, resp.delegate)
           storageService.set('username-' + resp.delegate.address, resp.delegate.username)
           deferred.resolve(resp.delegate)
         } else {
-          deferred.reject(gettextCatalog.getString('Cannot find delegate: ') + username)
+          deferred.reject(gettextCatalog.getString('Cannot find delegate: {{ delegateName }}', {delegateName: username}))
         }
       })
       return deferred.promise
@@ -458,28 +427,28 @@
 
     // TODO: NOT working yet, waiting for 0.3.2
     function searchDelegates (term) { // eslint-disable-line no-unused-vars
-      var deferred = $q.defer()
+      const deferred = $q.defer()
       if (!term) {
         deferred.reject(gettextCatalog.getString('No search term'))
         return deferred.promise
       }
-      networkService.getFromPeer('/api/delegates/search/?term=' + term).then(function (resp) {
+      networkService.getFromPeer('/api/delegates/search/?term=' + term).then((resp) => {
         if (resp && resp.success && resp.delegates) {
           deferred.resolve(resp.delegates)
         } else {
-          deferred.reject(gettextCatalog.getString('Cannot find delegates from this term: ') + term)
+          deferred.reject(gettextCatalog.getString('Cannot find any delegate using the search term \'{{ searchTerm }}\'!', {searchTerm: term}))
         }
-      }, function (err) {
-        deferred.reject(gettextCatalog.getString('Cannot find delegates on this peer: ') + err)
+      }, (err) => {
+        deferred.reject(gettextCatalog.getString('An error occurred when searching for delegates:') + err)
       })
       return deferred.promise
     }
 
     function getVotedDelegates (address) {
-      var deferred = $q.defer()
-      networkService.getFromPeer('/api/accounts/delegates/?address=' + address).then(function (resp) {
+      const deferred = $q.defer()
+      networkService.getFromPeer('/api/accounts/delegates/?address=' + address).then((resp) => {
         if (resp && resp.success) {
-          var delegates = []
+          let delegates = []
           if (resp.delegates && resp.delegates.length && resp.delegates[0]) {
             delegates = resp.delegates
           }
@@ -494,19 +463,18 @@
 
     function verifyMessage (message, publicKey, signature) {
       // check for hexadecimal, otherwise the signature check would may fail
-      var re = /[0-9A-Fa-f]{6}/g
+      const re = /[0-9A-Fa-f]{6}/g
       if (!re.test(publicKey) || !re.test(signature)) {
         // return here already because the process will fail otherwise
-        return gettextCatalog.getString('Error in your Input.')
+        return gettextCatalog.getString('Error in your input.')
       }
-      var crypto = require('crypto')
-      var hash = crypto.createHash('sha256')
+      const crypto = require('crypto')
+      let hash = crypto.createHash('sha256')
       hash = hash.update(Buffer.from(message, 'utf-8')).digest()
-      var ecpair = kapujs.ECPair.fromPublicKeyBuffer(Buffer.from(publicKey, 'hex'))
-      var ecsignature = kapujs.ECSignature.fromDER(Buffer.from(signature, 'hex'))
-      var success = ecpair.verify(hash, ecsignature)
+      const ecpair = kapujs.ECPair.fromPublicKeyBuffer(Buffer.from(publicKey, 'hex'))
+      const ecsignature = kapujs.ECSignature.fromDER(Buffer.from(signature, 'hex'))
+      const success = ecpair.verify(hash, ecsignature)
 
-      message = gettextCatalog.getString('Error in signature processing')
       if (success) {
         message = gettextCatalog.getString('The message is verified successfully')
       } else {
@@ -516,22 +484,22 @@
     }
 
     function signMessage (message, passphrase) {
-      var deferred = $q.defer()
-      var crypto = require('crypto')
-      var hash = crypto.createHash('sha256')
+      const deferred = $q.defer()
+      const crypto = require('crypto')
+      let hash = crypto.createHash('sha256')
       hash = hash.update(Buffer.from(message, 'utf-8')).digest()
-      var ecpair = kapujs.crypto.getKeys(passphrase)
+      const ecpair = kapujs.crypto.getKeys(passphrase)
       deferred.resolve({ signature: ecpair.sign(hash).toDER().toString('hex') })
       return deferred.promise
     }
 
     function signMessageWithLedger (message, path) {
-      var deferred = $q.defer()
+      const deferred = $q.defer()
       ledgerService.signMessage(path, message).then(
-        function (result) {
+        (result) => {
           deferred.resolve(result)
         },
-        function (error) {
+        (error) => {
           deferred.reject(error)
         }
       )
@@ -542,15 +510,15 @@
     // return null if could not make it
     function createDiffVote (address, newdelegates) {
       function arrayObjectIndexOf (myArray, searchTerm, property) {
-        for (var i = 0, len = myArray.length; i < len; i++) {
+        for (let i = 0, len = myArray.length; i < len; i++) {
           if (myArray[i][property] === searchTerm) return i
         }
         return -1
       }
 
-      var assets = []
-      var votedDelegates = storageService.get('voted-' + address) || []
-      votedDelegates = votedDelegates.map(function (delegate) {
+      const assets = []
+      let votedDelegates = storageService.get('voted-' + address) || []
+      votedDelegates = votedDelegates.map((delegate) => {
         return {
           username: delegate.username,
           address: delegate.address,
@@ -558,7 +526,7 @@
         }
       })
 
-      var delegates = newdelegates.map(function (delegate) {
+      const delegates = newdelegates.map((delegate) => {
         return {
           username: delegate.username,
           address: delegate.address,
@@ -569,10 +537,10 @@
       if (delegates.length > 101) {
         return null
       }
-      var difflist = []
-      var notRemovedDelegates = []
-      for (var i in delegates) {
-        var delegate = delegates[i]
+      let difflist = []
+      const notRemovedDelegates = []
+      for (const i in delegates) {
+        const delegate = delegates[i]
         if (arrayObjectIndexOf(votedDelegates, delegate.publicKey, 'publicKey') === -1) {
           delegate.vote = '+'
           difflist.push(delegate)
@@ -584,8 +552,8 @@
           difflist = []
         }
       }
-      for (var j in votedDelegates) {
-        var votedDelegate = votedDelegates[j]
+      for (const j in votedDelegates) {
+        const votedDelegate = votedDelegates[j]
         if (arrayObjectIndexOf(notRemovedDelegates, votedDelegate.publicKey, 'publicKey') === -1) {
           votedDelegate.vote = '-'
           difflist.push(votedDelegate)
@@ -603,12 +571,12 @@
     }
 
     function getSponsors () {
-      var deferred = $q.defer()
-      var result = []
-      $http.get('https://gist.githubusercontent.com/fix/a7b1d797be38b0591e725a24e6735996/raw/sponsors.json').then(function (resp) {
-        var count = 0
-        for (var i in resp.data) {
-          networkService.getFromPeer('/api/delegates/get/?publicKey=' + resp.data[i].publicKey).then(function (resp2) {
+      const deferred = $q.defer()
+      const result = []
+      $http.get('https://gist.githubusercontent.com/fix/a7b1d797be38b0591e725a24e6735996/raw/sponsors.json').then((resp) => {
+        let count = 0
+        for (const i in resp.data) {
+          networkService.getFromPeer('/api/delegates/get/?publicKey=' + resp.data[i].publicKey).then((resp2) => {
             if (resp2.data && resp2.data.success && resp2.data.delegate) {
               result.push(resp2.data.delegate)
             }
@@ -618,7 +586,7 @@
             }
           }, () => count++)
         }
-      }, function (err) {
+      }, (err) => {
         console.log(err)
         deferred.reject(gettextCatalog.getString('Cannot get sponsors'))
       })
@@ -626,9 +594,9 @@
     }
 
     function createVirtual (passphrase) {
-      var deferred = $q.defer()
-      var address = kapujs.crypto.getAddress(kapujs.crypto.getKeys(passphrase).publicKey, networkService.getNetwork().version)
-      var account = getAccount(address)
+      const deferred = $q.defer()
+      const address = kapujs.crypto.getAddress(kapujs.crypto.getKeys(passphrase).publicKey, networkService.getNetwork().version)
+      const account = getAccount(address)
       if (account) {
         account.virtual = account.virtual || {}
         storageService.set('virtual-' + address, account.virtual)
@@ -641,8 +609,8 @@
     }
 
     function setToFolder (address, folder, amount) {
-      var virtual = getVirtual(address)
-      var f = virtual[folder]
+      const virtual = getVirtual(address)
+      const f = virtual[folder]
       if (f && amount >= 0) {
         f.amount = amount
       } else if (!f && amount >= 0) {
@@ -653,14 +621,14 @@
     }
 
     function deleteFolder (address, folder) {
-      var virtual = storageService.get('virtual-' + address)
+      const virtual = storageService.get('virtual-' + address)
       delete virtual[folder]
       storageService.set('virtual-' + address, virtual)
       return getVirtual(address)
     }
 
     function renameFolder (address, folder, newFolder) {
-      var virtual = storageService.get('virtual-' + address)
+      const virtual = storageService.get('virtual-' + address)
       virtual[newFolder] = virtual[folder]
       delete virtual[folder]
       storageService.set('virtual-' + address, virtual)
@@ -668,7 +636,7 @@
     }
 
     function getVirtual (address) {
-      var virtual = storageService.get('virtual-' + address)
+      const virtual = storageService.get('virtual-' + address)
       if (virtual) {
         virtual.uservalue = function (folder) {
           return function (value) {
@@ -686,8 +654,8 @@
           }
         }
         virtual.getFolders = function () {
-          var folders = []
-          for (var i in virtual) {
+          const folders = []
+          for (const i in virtual) {
             if (virtual.hasOwnProperty(i) && typeof virtual[i] !== 'function') {
               folders.push(i)
             }
@@ -698,7 +666,7 @@
       return virtual
     }
 
-    var allowedDelegateNameChars = /^[a-z0-9!@$&_.]+$/g
+    const allowedDelegateNameChars = /^[a-z0-9!@$&_.]+$/g
 
     function sanitizeDelegateName (delegateName) {
       if (!delegateName) {
@@ -708,7 +676,7 @@
         throw new Error('Delegate name must be lowercase')
       }
 
-      var sanitizedName = String(delegateName).toLowerCase().trim()
+      const sanitizedName = String(delegateName).toLowerCase().trim()
       if (sanitizedName === '') {
         throw new Error('Empty delegate name')
       }
@@ -724,28 +692,28 @@
 
     return {
       loadAllAccounts: function () {
-        var accounts = storageService.get('addresses')
+        let accounts = storageService.get('addresses')
 
         if (!accounts) {
           return []
         }
 
-        accounts = accounts.filter(function (a) {
+        accounts = accounts.filter((a) => {
           return !a.ledger
         })
 
-        var uniqueaccounts = []
-        for (var i in accounts) {
+        const uniqueaccounts = []
+        for (const i in accounts) {
           if (uniqueaccounts.indexOf(accounts[i]) === -1) {
             uniqueaccounts.push(accounts[i])
           }
         }
         accounts = uniqueaccounts
-        accounts = accounts.filter(function (address) {
+        accounts = accounts.filter((address) => {
           return (storageService.get('username-' + address) != null || storageService.get('virtual-' + address) != null) && !storageService.get(address).ledger
         })
-        return accounts.map(function (address) {
-          var account = storageService.get(address)
+        return accounts.map((address) => {
+          const account = storageService.get(address)
           if (account) {
             account.transactions = storageService.get('transactions-' + address)
             account.delegate = storageService.get('delegate-' + address)
@@ -753,11 +721,11 @@
             account.virtual = getVirtual(address)
             return account
           }
-          return { address: address }
+          return { address }
         })
       },
 
-      getAccount: getAccount,
+      getAccount,
 
       refreshAccount: function (account) {
         return fetchAccount(account.address)
@@ -771,64 +739,60 @@
         return storageService.get('username-' + address) || address
       },
 
-      addWatchOnlyAddress: addWatchOnlyAddress,
+      addWatchOnlyAddress,
 
-      createAccount: createAccount,
+      createAccount,
 
-      savePassphrases: savePassphrases,
+      removeAccount,
 
-      getPassphrases: getPassphrases,
+      fetchAccount,
 
-      removeAccount: removeAccount,
-
-      fetchAccount: fetchAccount,
-
-      fetchAccountAndForget: fetchAccountAndForget,
+      fetchAccountAndForget,
 
       // return a copy of the object, so the original can't be changed
       defaultFees: JSON.parse(JSON.stringify(self.defaultFees)),
 
-      getFees: getFees,
+      getFees,
 
-      getTransactions: getTransactions,
+      getTransactions,
 
-      getAllTransactions: getAllTransactions,
+      getAllTransactions,
 
-      getRangedTransactions: getRangedTransactions,
+      getRangedTransactions,
 
-      isValidAddress: isValidAddress,
+      isValidAddress,
 
-      verifyMessage: verifyMessage,
+      verifyMessage,
 
-      signMessage: signMessage,
+      signMessage,
 
-      signMessageWithLedger: signMessageWithLedger,
+      signMessageWithLedger,
 
-      createDiffVote: createDiffVote,
+      createDiffVote,
 
-      getVotedDelegates: getVotedDelegates,
+      getVotedDelegates,
 
-      getDelegate: getDelegate,
+      getDelegate,
 
-      getActiveDelegates: getActiveDelegates,
+      getActiveDelegates,
 
-      getDelegateByUsername: getDelegateByUsername,
+      getDelegateByUsername,
 
-      getSponsors: getSponsors,
+      getSponsors,
 
-      getTransactionLabel: getTransactionLabel,
+      getTransactionLabel,
 
-      createVirtual: createVirtual,
+      createVirtual,
 
-      setToFolder: setToFolder,
+      setToFolder,
 
-      deleteFolder: deleteFolder,
+      deleteFolder,
 
-      renameFolder: renameFolder,
+      renameFolder,
 
-      sanitizeDelegateName: sanitizeDelegateName,
+      sanitizeDelegateName,
 
-      formatTransaction: formatTransaction
+      formatTransaction
     }
   }
 })()

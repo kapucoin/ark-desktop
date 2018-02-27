@@ -17,9 +17,11 @@
       '$interval',
       '$log',
       '$mdDialog',
+      'dialogService',
       '$scope',
       '$mdMedia',
       'gettextCatalog',
+      'gettext',
       '$mdThemingProvider',
       '$mdTheming',
       '$window',
@@ -50,9 +52,11 @@
     $interval,
     $log,
     $mdDialog,
+    dialogService,
     $scope,
     $mdMedia,
     gettextCatalog,
+    gettext,
     $mdThemingProvider,
     $mdTheming,
     $window,
@@ -61,70 +65,94 @@
     utilityService
   ) {
     const _path = require('path')
+    const electron = require('electron')
 
-    var self = this
+    const self = this
 
-    var languages = {
-      en: gettextCatalog.getString('English'),
-      zh_CN: gettextCatalog.getString('Chinese simplified'),
-      zh_TW: gettextCatalog.getString('Chinese traditional'),
-      fr: gettextCatalog.getString('French'),
-      el: gettextCatalog.getString('Greek'),
-      nl: gettextCatalog.getString('Dutch'),
-      ar: gettextCatalog.getString('Arab'),
-      pl: gettextCatalog.getString('Polish'),
-      pt_BR: gettextCatalog.getString('Portuguese'),
-      bg_BG: gettextCatalog.getString('Bulgarian'),
-      hu: gettextCatalog.getString('Hungarish'),
-      sl: gettextCatalog.getString('Slovenian'),
-      ro: gettextCatalog.getString('Romanian'),
-      de: gettextCatalog.getString('German'),
-      it: gettextCatalog.getString('Italian'),
-      id: gettextCatalog.getString('Indonesian'),
-      ru: gettextCatalog.getString('Russian')
+    self.getLanguage = function () {
+      return storageService.get('language') || 'en'
     }
+
+    /**
+     * Set the language of the application and refresh languages array
+     */
+    self.setLanguage = function () {
+      storageService.set('language', self.language)
+      gettextCatalog.setCurrentLanguage(self.language)
+
+      self.languages = [
+        { name: gettextCatalog.getString('Arabic'), code: 'ar' },
+        { name: gettextCatalog.getString('Bulgarian'), code: 'bg_BG' },
+        { name: gettextCatalog.getString('German'), code: 'de' },
+        { name: gettextCatalog.getString('Greek'), code: 'el' },
+        { name: gettextCatalog.getString('English'), code: 'en' },
+        { name: gettextCatalog.getString('French'), code: 'fr' },
+        { name: gettextCatalog.getString('Hungarish'), code: 'hu' },
+        { name: gettextCatalog.getString('Indonesian'), code: 'id' },
+        { name: gettextCatalog.getString('Italian'), code: 'it' },
+        { name: gettextCatalog.getString('Dutch'), code: 'nl' },
+        { name: gettextCatalog.getString('Polish'), code: 'pl' },
+        { name: gettextCatalog.getString('Portuguese - Brazil'), code: 'pt_BR' },
+        { name: gettextCatalog.getString('Romanian'), code: 'ro' },
+        { name: gettextCatalog.getString('Russian'), code: 'ru' },
+        { name: gettextCatalog.getString('Slovenian'), code: 'sl' },
+        { name: gettextCatalog.getString('Chinese - China'), code: 'zh_CN' },
+        { name: gettextCatalog.getString('Chinese - Taiwan'), code: 'zh_TW' }
+      ].sort((a, b) => a.name.localeCompare(b.name))
+    }
+
+    self.language = self.getLanguage()
+    self.languages = []
+
+    self.setLanguage()
 
     pluginLoader.triggerEvent('onStart')
 
+    electron.ipcRenderer.on('uri', (event, uri) => {
+      $timeout(() => {
+        const qrcodeElement = document.querySelector('ark-qrcode')
+        const scheme = qrcodeElement.deserializeURI(uri)
+
+        if (!scheme) return toastService.error(gettext('Invalid URI'))
+        if (scheme && !self.selected) return toastService.error(gettext('Select an account and open the URI again'))
+        if (scheme && self.selected) return $scope.$broadcast('app:onURI', scheme)
+      }, 0)
+    })
+
     self.currencies = [
-      { name: 'usd', symbol: '$' },
       { name: 'btc', symbol: 'Ƀ' },
+      { name: 'usd', symbol: '$' },
       { name: 'eur', symbol: '€' }
     ]
 
     gettextCatalog.debug = false
-    self.language = storageService.get('language') || 'en'
-    self.selectedLanguage = self.language
-    gettextCatalog.setCurrentLanguage(self.language)
 
-    self.getLanguage = function () {
-      return languages[self.language]
-    }
+    const cancel = () => dialogService.hide()
 
     $window.onbeforeunload = function () {
       storageService.saveState()
     }
 
     self.closeApp = function () {
-      var confirm = $mdDialog.confirm()
+      const confirm = $mdDialog.confirm()
         .title(gettextCatalog.getString('Quit Ark Client?'))
         .theme(self.currentTheme)
         .ok(gettextCatalog.getString('Quit'))
         .cancel(gettextCatalog.getString('Cancel'))
-      $mdDialog.show(confirm).then(function () {
+      $mdDialog.show(confirm).then(() => {
         require('electron').remote.app.quit()
       })
     }
 
     self.windowApp = function (action, args) {
-      var curWin = require('electron').remote.getCurrentWindow()
+      const curWin = require('electron').remote.getCurrentWindow()
       if (curWin[action]) return curWin[action](args)
 
       return null
     }
 
     self.clearData = function () {
-      var confirm = $mdDialog.confirm()
+      const confirm = $mdDialog.confirm()
         .title(gettextCatalog.getString('Are you sure?'))
         .theme(self.currentTheme)
         .textContent(gettextCatalog.getString('All your data, including created accounts, networks and contacts will be removed from the app and reset to default.'))
@@ -132,57 +160,10 @@
         .ok(gettextCatalog.getString('Yes'))
         .cancel(gettextCatalog.getString('Cancel'))
 
-      $mdDialog.show(confirm).then(function () {
+      $mdDialog.show(confirm).then(() => {
         storageService.clearData()
         self.windowApp('reload')
       })
-    }
-
-    self.createRefreshState = (successMessage, errorMessage) => {
-      var stateObject = {}
-
-      stateObject.states = []
-
-      stateObject.isRefreshing = false
-
-      stateObject.create = () => {
-        var state = { isFinished: false, hasError: false }
-        stateObject.states.push(state)
-        return state
-      }
-
-      stateObject.shouldRefresh = () => {
-        if (stateObject.isRefreshing) {
-          return false
-        }
-
-        stateObject.isRefreshing = true
-        return true
-      }
-
-      stateObject.updateRefreshState = (showToast) => {
-        var areAllFinished = stateObject.states.every(state => state.isFinished)
-        var hasAnyError = stateObject.states.some(state => state.hasError)
-
-        if (!areAllFinished) {
-          return
-        }
-
-        stateObject.isRefreshing = false
-        stateObject.states = []
-
-        if (!showToast) {
-          return
-        }
-
-        if (!hasAnyError) {
-          toastService.success(successMessage, 3000)
-        } else {
-          toastService.error(errorMessage, 3000)
-        }
-      }
-
-      return stateObject
     }
 
     self.clientVersion = require(_path.resolve(__dirname, '../../package.json')).version
@@ -190,14 +171,13 @@
     self.openExplorer = openExplorer
     self.timestamp = timestamp
     self.showValidateTransaction = showValidateTransaction
-    networkService.getLatestClientVersion().then(function (r) { self.latestClientVersion = r })
+    networkService.getLatestClientVersion().then((r) => { self.latestClientVersion = r })
     self.isNetworkConnected = false
     self.selected = null
     self.accounts = []
     self.selectAccount = selectAccount
     self.refreshCurrentAccount = refreshCurrentAccount
-    self.accountRefreshState = self.createRefreshState('Account refreshed', 'Could not refresh account')
-    self.accountsRefreshState = self.createRefreshState('Accounts refreshed', 'Could not refresh accounts')
+    self.accountRefreshState = utilityService.createRefreshState(gettext('Account refreshed'), gettext('Could not refresh account'))
     self.gotoAddress = gotoAddress
     self.getAllDelegates = getAllDelegates
     self.addWatchOnlyAddress = addWatchOnlyAddress
@@ -214,17 +194,23 @@
     self.manageBackgrounds = manageBackgrounds
     self.showExchangeRate = showExchangeRate
     self.manageNetworks = manageNetworks
-    self.openPassphrasesDialog = openPassphrasesDialog
     self.createDelegate = createDelegate
     self.currency = storageService.get('currency') || self.currencies[0]
-    self.switchNetwork = networkService.switchNetwork
+    self.switchNetwork = (newNetwork, reload) => {
+      if (reload) {
+        dialogService.openLoadingDialog(self.currentTheme,
+                                        gettext('Switching network'),
+                                        gettext('Please wait while the the switching is in progress'))
+      }
+      networkService.switchNetwork(newNetwork, reload)
+    }
     self.marketinfo = {}
     self.network = networkService.getNetwork()
     self.listNetworks = networkService.getNetworks()
     self.context = storageService.getContext()
     self.btcValueActive = false
 
-    self.bitcoinCurrency = self.currencies.find(function (currency) {
+    self.bitcoinCurrency = self.currencies.find((currency) => {
       return currency.name === 'btc'
     })
     self.toggleCurrency = self.bitcoinCurrency
@@ -238,7 +224,7 @@
     self.currentTheme = 'default'// self.network.theme
 
     // set 'dynamic' as the default theme
-    generateDynamicPalette(function (name) {
+    generateDynamicPalette((name) => {
       if (name && self.network.theme === name) {
         self.network.theme = name
       }
@@ -250,11 +236,11 @@
     // if (self.network.themeDark) {self.currentTheme = 'dark'}
 
     // refreshing displayed account every 8s
-    $interval(function () {
-      var selected = self.selected
+    $interval(() => {
+      const selected = self.selected
       if (!selected) return
 
-      var transactions = selected.transactions || []
+      const transactions = selected.transactions || []
 
       if (transactions.length > 0 && transactions[0].confirmations === 0) {
         return self.refreshCurrentAccount()
@@ -265,10 +251,10 @@
       }
     }, 8 * 1000)
 
-    var nocall = false
+    let nocall = false
 
     // detect Ledger
-    $interval(function () {
+    $interval(() => {
       if (nocall) {
         return
       }
@@ -312,35 +298,46 @@
     self.connection = networkService.getConnection()
 
     self.connection.then(
-      function () {},
-      function () {},
-      function (connectedPeer) {
+      () => {},
+      () => {},
+      (connectedPeer) => {
         self.connectedPeer = connectedPeer
 
         // Wait a little to ignore the initial connection delay and short interruptions
-        $timeout(function () {
+        $timeout(() => {
           if (!self.connectedPeer.isConnected && self.isNetworkConnected) {
             self.isNetworkConnected = false
-            toastService.error('Network disconnected!')
+            toastService.error(gettext('Network disconnected!'))
           } else if (self.connectedPeer.isConnected && !self.isNetworkConnected) {
             self.isNetworkConnected = true
-            self.refreshAccountBalances()
-            toastService.success('Network connected and healthy!')
+            toastService.success(gettext('Network connected and healthy!'))
           }
         }, 500)
       }
     )
 
+    function getAccountIcon (account) {
+      if (account.delegate) {
+        return 'security'
+      }
+
+      if (!account.cold) {
+        return 'account_balance'
+      }
+
+      return 'cloud_off'
+    }
+
     // get themes colors to show in manager appearance
     function reloadThemes () {
-      var currentThemes = $mdThemingProvider.$get().THEMES
-      var mapThemes = {}
+      const currentThemes = $mdThemingProvider.$get().THEMES
+      const mapThemes = {}
 
-      Object.keys(currentThemes).forEach(function (theme) {
-        var colors = currentThemes[theme].colors
-        var names = []
+      Object.keys(currentThemes).forEach((theme) => {
+        const colors = currentThemes[theme].colors
+        const names = []
 
-        for (var color in colors) {
+        for (const color in colors) {
           names.push('default-' + colors[color].name)
         }
 
@@ -355,7 +352,7 @@
     }
 
     function formatErrorMessage (error) {
-      var basicMessage = ''
+      let basicMessage = ''
       if (typeof error === 'string') {
         basicMessage = error
       } else if (typeof error.error === 'string') {
@@ -365,52 +362,13 @@
       } else if (typeof error.message === 'string') {
         basicMessage = error.message
       }
-      var errorMessage = gettextCatalog.getString('Error: ') + basicMessage.replace('Error: ', '')
+      const errorMessage = gettextCatalog.getString('Error:') + ' ' + basicMessage.replace('Error: ', '')
       console.error(errorMessage, '\n', error)
       return errorMessage
     }
 
-    function formatAndToastError (error, hideDelay) {
-      if (!hideDelay) {
-        hideDelay = 5000
-      }
+    function formatAndToastError (error, hideDelay = 5000) {
       toastService.error(formatErrorMessage(error), hideDelay, true)
-    }
-
-    // TODO: deprecated
-    // function showToast (msg, hideDelay, isError) {
-    //   if (!hideDelay) {
-    //     hideDelay = 5000
-    //   }
-
-    //   var toast = $mdToast.simple()
-    //     .hideDelay(hideDelay)
-    //     .textContent(gettextCatalog.getString(msg))
-
-    //   if (isError) {
-    //     toast.theme('error')
-    //   }
-
-    //   $mdToast.show(toast)
-    // }
-
-    self.selectAllLanguages = function () {
-      return languages
-    }
-
-    self.setLanguage = function () {
-      function getlanguage (value) {
-        for (var prop in languages) {
-          if (languages.hasOwnProperty(prop)) {
-            if (languages[prop] === value) {
-              return prop
-            }
-          }
-        }
-      }
-      self.language = getlanguage(this.selectedLanguage)
-      storageService.set('language', self.language)
-      gettextCatalog.setCurrentLanguage(self.language)
     }
 
     // Load all registered accounts
@@ -428,7 +386,7 @@
     }
 
     self.getAllAccounts = function () {
-      var accounts = self.myAccounts()
+      let accounts = self.myAccounts()
       if (self.ledgerAccounts && self.ledgerAccounts.length) {
         accounts = accounts.concat(self.ledgerAccounts)
       }
@@ -437,10 +395,13 @@
     }
 
     self.myAccounts = function () {
-      return self.accounts.filter(function (account) {
+      return self.accounts.filter((account) => {
         return !!account.virtual
-      }).sort(function (a, b) {
+      }).sort((a, b) => {
         return b.balance - a.balance
+      }).map(account => {
+        account.icon = getAccountIcon(account)
+        return account
       })
     }
 
@@ -450,9 +411,9 @@
     }
 
     self.otherAccounts = function () {
-      return self.accounts.filter(function (account) {
+      return self.accounts.filter((account) => {
         return !account.virtual
-      }).sort(function (a, b) {
+      }).sort((a, b) => {
         return b.balance - a.balance
       })
     }
@@ -462,13 +423,20 @@
       $mdMenuOpen(ev)
     }
 
-    self.selectNextCurrency = function () {
+    self.selectCurrency = function ($event) {
       self.toggleBitcoinCurrency(false)
-      var currenciesNames = self.currencies.map(function (x) {
+      const currenciesNames = self.currencies.map((x) => {
         return x.name
       })
-      var currencyIndex = currenciesNames.indexOf(self.currency.name)
-      var newIndex = currencyIndex === currenciesNames.length - 1 ? 0 : currencyIndex + 1
+      const currencyIndex = currenciesNames.indexOf(self.currency.name)
+      let newIndex
+      if ($event.shiftKey) {
+        // Select the previous currency
+        newIndex = currencyIndex === 0 ? currenciesNames.length - 1 : currencyIndex - 1
+      } else {
+        // Select the next currency
+        newIndex = currencyIndex === currenciesNames.length - 1 ? 0 : currencyIndex + 1
+      }
 
       self.currency = self.currencies[newIndex]
       self.changeCurrency()
@@ -485,9 +453,9 @@
     }
 
     self.getDefaultValue = function (account) {
-      var amount = account.balance
+      let amount = account.balance
       if (account.virtual) {
-        for (var folder in account.virtual) {
+        for (const folder in account.virtual) {
           if (account.virtual[folder].amount) {
             amount = amount - account.virtual[folder].amount
           }
@@ -505,10 +473,10 @@
     }
 
     self.manageFolder = function (account, currentFolderName) {
-      var titleText = (!currentFolderName ? 'Create' : 'Rename') + ' Virtual Folder'
-      var buttonText = (!currentFolderName ? 'Add' : 'Save')
-      var confirmText = 'Virtual folder ' + (!currentFolderName ? 'added' : 'saved') + '!'
-      var currentValue = (!currentFolderName ? null : currentFolderName)
+      const titleText = !currentFolderName ? gettext('Create Virtual Folder') : gettext('Rename Virtual Folder')
+      const buttonText = !currentFolderName ? gettext('Add') : gettext('Save')
+      const confirmText = !currentFolderName ? gettext('Virtual folder added!') : gettext('Virtual folder saved!')
+      const currentValue = (!currentFolderName ? null : currentFolderName)
       let confirm
 
       if (account.virtual) {
@@ -518,10 +486,10 @@
           .textContent(gettextCatalog.getString('Please enter a folder name.'))
           .placeholder(gettextCatalog.getString('Folder name'))
           .initialValue(currentValue)
-          .ariaLabel(gettextCatalog.getString('Folder Name'))
+          .ariaLabel(gettextCatalog.getString('Folder name'))
           .ok(gettextCatalog.getString(buttonText))
           .cancel(gettextCatalog.getString('Cancel'))
-        $mdDialog.show(confirm).then(function (foldername) {
+        $mdDialog.show(confirm).then((foldername) => {
           if (account.virtual[foldername]) {
             formatAndToastError(gettextCatalog.getString(
               'A folder with that name already exists.'
@@ -539,29 +507,29 @@
         confirm = $mdDialog.prompt()
           .title(gettextCatalog.getString('Login'))
           .theme(self.currentTheme)
-          .textContent(gettextCatalog.getString('Please enter this account passphrase to login.'))
+          .textContent(gettextCatalog.getString('Please enter the passphrase of this account to proceed.'))
           .placeholder(gettextCatalog.getString('passphrase'))
           .ariaLabel(gettextCatalog.getString('Passphrase'))
           .ok(gettextCatalog.getString('Login'))
           .cancel(gettextCatalog.getString('Cancel'))
-        $mdDialog.show(confirm).then(function (passphrase) {
-          accountService.createVirtual(passphrase).then(function (virtual) {
+        $mdDialog.show(confirm).then((passphrase) => {
+          accountService.createVirtual(passphrase).then((virtual) => {
             account.virtual = virtual
-            toastService.success('Succesfully Logged In!', 3000)
-          }, function (err) {
-            toastService.success(gettextCatalog.getString('Error when trying to login: ') + err, 3000, true)
+            toastService.success(gettext('Successfully logged in!'), 3000)
+          }, (err) => {
+            toastService.success(gettextCatalog.getString('Error when trying to login:') + ' ' + err, 3000, true)
           })
         })
       }
     }
 
     function gotoAddress (address) {
-      var currentaddress = address
+      const currentaddress = address
 
-      accountService.fetchAccountAndForget(currentaddress).then(function (a) {
+      accountService.fetchAccountAndForget(currentaddress).then((a) => {
         self.selected = a
 
-        $timeout(function () {
+        $timeout(() => {
           // pluginLoader.triggerEvent("onSelectAccount", self.selected)
           $scope.$broadcast('account:onSelect', self.selected)
         })
@@ -573,7 +541,7 @@
         }
         accountService
           .refreshAccount(self.selected)
-          .then(function (account) {
+          .then((account) => {
             if (self.selected.address === currentaddress) {
               self.selected.balance = account.balance
               self.selected.secondSignature = account.secondSignature
@@ -585,16 +553,16 @@
           })
         accountService
           .getTransactions(currentaddress)
-          .then(function (transactions) {
+          .then((transactions) => {
             if (self.selected.address === currentaddress) {
               if (!self.selected.transactions) {
                 self.selected.transactions = transactions
               } else {
-                transactions = transactions.sort(function (a, b) {
+                transactions = transactions.sort((a, b) => {
                   return b.timestamp - a.timestamp
                 })
 
-                var previousTx = [...self.selected.transactions]
+                let previousTx = [...self.selected.transactions]
                 self.selected.transactions = transactions
 
                 // if the previous tx was unconfirmed, rebroadcast and put it back at the top (for better UX)
@@ -605,14 +573,14 @@
 
                 previousTx = null
               }
-              $timeout(function () {
+              $timeout(() => {
                 $scope.$broadcast('account:onRefreshTransactions', self.selected.transactions)
               })
             }
           })
         accountService
           .getVotedDelegates(self.selected.address)
-          .then(function (delegates) {
+          .then((delegates) => {
             if (self.selected.address === currentaddress) {
               self.selected.delegates = delegates
               self.selected.selectedVotes = delegates.slice(0)
@@ -620,7 +588,7 @@
           })
         accountService
           .getDelegate(self.selected.publicKey)
-          .then(function (delegate) {
+          .then((delegate) => {
             if (self.selected.address === currentaddress) {
               self.selected.delegate = delegate
             }
@@ -633,13 +601,13 @@
         return
       }
 
-      var accountState = self.accountRefreshState.create()
-      var transactionsState = self.accountRefreshState.create()
+      const accountState = self.accountRefreshState.create()
+      const transactionsState = self.accountRefreshState.create()
 
-      var myaccount = self.selected
+      const myaccount = self.selected
       accountService
         .refreshAccount(myaccount)
-        .then(function (account) {
+        .then((account) => {
           if (self.selected.address === myaccount.address) {
             self.selected.balance = account.balance
             self.selected.secondSignature = account.secondSignature
@@ -654,26 +622,26 @@
         })
         .finally(() => {
           accountState.isFinished = true
-          self.accountRefreshState.updateRefreshState(showToast)
+          self.accountRefreshState.updateRefreshState(showToast ? toastService : null)
         })
       accountService
         .getTransactions(myaccount.address)
-        .then(function (transactions) {
+        .then((transactions) => {
           if (self.selected.address === myaccount.address) {
             if (!self.selected.transactions) {
               self.selected.transactions = transactions
             } else {
-              transactions = transactions.sort(function (a, b) {
+              transactions = transactions.sort((a, b) => {
                 return b.timestamp - a.timestamp
               })
 
-              var previousTx = [...self.selected.transactions]
+              let previousTx = [...self.selected.transactions]
               self.selected.transactions = transactions
 
-              var playSong = storageService.get('playFundsReceivedSong')
+              const playSong = storageService.get('playFundsReceivedSong')
               if (playSong === true && previousTx[0].id !== transactions[0].id && transactions[0].type === 0 && transactions[0].recipientId === myaccount.address) {
-                var wavFile = _path.resolve(__dirname, 'assets/audio/power-up.wav')
-                var audio = new Audio(wavFile)
+                const wavFile = _path.resolve(__dirname, 'assets/audio/power-up.wav')
+                const audio = new Audio(wavFile)
                 audio.play()
               }
 
@@ -685,7 +653,7 @@
 
               previousTx = null
             }
-            $timeout(function () {
+            $timeout(() => {
               $scope.$broadcast('account:onRefreshTransactions', self.selected.transactions)
             })
           }
@@ -695,30 +663,8 @@
         })
         .finally(() => {
           transactionsState.isFinished = true
-          self.accountRefreshState.updateRefreshState(showToast)
+          self.accountRefreshState.updateRefreshState(showToast ? toastService : null)
         })
-    }
-
-    self.refreshAccountBalances = (showToast) => {
-      const accounts = self.getAllAccounts()
-
-      if (!accounts.length || !self.accountsRefreshState.shouldRefresh()) {
-        return
-      }
-
-      networkService.getPrice()
-
-      accounts.forEach(account => {
-        var state = self.accountsRefreshState.create()
-        accountService
-          .refreshAccount(account)
-          .then(updated => { account.balance = updated.balance })
-          .catch(() => { state.hasError = true })
-          .finally(() => {
-            state.isFinished = true
-            self.accountsRefreshState.updateRefreshState(showToast)
-          })
-      })
     }
 
     self.toggleRefreshAccountsAutomatically = function () {
@@ -729,17 +675,56 @@
       storageService.set('playFundsReceivedSound', self.playFundsReceivedSound, true)
     }
 
+    self.searchContactOrAccount = (text, exactMatch) => {
+      text = (text || '').toLowerCase()
+
+      const accounts = self.getAllAccounts()
+        .map(acc => {
+          return {name: acc.username, address: acc.address, type: gettext('Account'), icon: acc.icon}
+        })
+      let contacts = (storageService.get('contacts') || [])
+        .map(c => {
+          return {name: c.name, address: c.address, type: gettext('Contact'), icon: 'account_circle'}
+        })
+
+      contacts = contacts.concat(accounts).sort((a, b) => {
+        if (a.type === 'Contact' && b.type !== 'Contact') {
+          return -1
+        }
+
+        if (a.type !== 'Contact' && b.type === 'Contact') {
+          return 1
+        }
+
+        if (a.name && b.name) {
+          return a.name > b.name
+        }
+
+        if (b.name) {
+          return 1
+        }
+
+        return -1
+      })
+
+      const compareFunc = exactMatch
+        ? (compare) => compare && compare.toLowerCase() === text
+        : (compare) => compare && compare.toLowerCase().indexOf(text) > -1
+
+      return contacts.filter(contact => compareFunc(contact.address) || compareFunc(contact.name))
+    }
+
     /**
      * Select the current avatars
      * @param menuId
      */
     // TODO Used in dashboard navbar and accountBox
     function selectAccount (account) {
-      var currentaddress = account.address
+      const currentaddress = account.address
       self.selected = accountService.getAccount(currentaddress)
       self.selected.ledger = account.ledger
 
-      $timeout(function () {
+      $timeout(() => {
         // pluginLoader.triggerEvent("onSelectAccount", self.selected)
         $scope.$broadcast('account:onSelect', self.selected)
       })
@@ -754,7 +739,7 @@
       }
       accountService
         .refreshAccount(self.selected)
-        .then(function (account) {
+        .then((account) => {
           if (self.selected.address === currentaddress) {
             self.selected.balance = account.balance
             self.selected.secondSignature = account.secondSignature
@@ -766,22 +751,22 @@
         })
       accountService
         .getTransactions(currentaddress)
-        .then(function (transactions) {
+        .then((transactions) => {
           if (self.selected.address === currentaddress) {
             if (!self.selected.transactions) {
               self.selected.transactions = transactions
             } else {
-              transactions = transactions.sort(function (a, b) {
+              transactions = transactions.sort((a, b) => {
                 return b.timestamp - a.timestamp
               })
 
-              var previousTx = [...self.selected.transactions]
+              let previousTx = [...self.selected.transactions]
               self.selected.transactions = transactions
 
-              var playSound = storageService.get('playFundsReceivedSound')
+              const playSound = storageService.get('playFundsReceivedSound')
               if (playSound === true && transactions.length > previousTx.length && transactions[0].type === 0 && transactions[0].recipientId === self.selected.address) {
-                var wavFile = _path.resolve(__dirname, 'assets/audio/power-up.wav')
-                var audio = new Audio(wavFile)
+                const wavFile = _path.resolve(__dirname, 'assets/audio/power-up.wav')
+                const audio = new Audio(wavFile)
                 audio.play()
               }
 
@@ -793,14 +778,14 @@
 
               previousTx = null
             }
-            $timeout(function () {
+            $timeout(() => {
               $scope.$broadcast('account:onRefreshTransactions', self.selected.transactions)
             })
           }
         })
       accountService
         .getVotedDelegates(self.selected.address)
-        .then(function (delegates) {
+        .then((delegates) => {
           if (self.selected.address === currentaddress) {
             self.selected.delegates = delegates
             self.selected.selectedVotes = delegates.slice(0)
@@ -808,7 +793,7 @@
         })
       accountService
         .getDelegate(self.selected.publicKey)
-        .then(function (delegate) {
+        .then((delegate) => {
           if (self.selected.address === currentaddress) {
             self.selected.delegate = delegate
           }
@@ -819,33 +804,27 @@
      * Add an account
      */
     function addWatchOnlyAddress () {
-      function cancel () {
-        $mdDialog.hide()
-      }
-
       function validateAddress () {
-        var isAddress = /^[1-9A-Za-z]+$/g
-        var address = $scope.address
+        const isAddress = /^[1-9A-Za-z]+$/g
+        const address = $scope.address
         if (isAddress.test(address)) {
-          accountService.fetchAccount(address).then(function (account) {
+          accountService.fetchAccount(address).then((account) => {
             self.accounts.push(account)
             selectAccount(account)
-            toastService.success('Account added!', 3000)
+            toastService.success(gettext('Account added!'), 3000)
           })
           cancel()
         } else {
           toastService.error(
-            gettextCatalog.getString('Address') + ' ' + address + ' ' + gettextCatalog.getString('is not recognised'),
+            gettextCatalog.getString('Address \'{{ address }}\' is not recognized', {address: address}),
             3000,
             true
           )
         }
       }
 
-      $scope.send = {
-        cancel: cancel,
-        validateAddress: validateAddress
-      }
+      $scope.send = { cancel, validateAddress }
+
       $mdDialog.show({
         parent: angular.element(document.getElementById('app')),
         templateUrl: './src/accounts/view/addWatchOnlyAddress.html',
@@ -858,9 +837,9 @@
 
     function getAllDelegates (selectedAccount) {
       function arrayUnique (array) {
-        var a = array.concat()
-        for (var i = 0; i < a.length; ++i) {
-          for (var j = i + 1; j < a.length; ++j) {
+        const a = array.concat()
+        for (let i = 0; i < a.length; ++i) {
+          for (let j = i + 1; j < a.length; ++j) {
             if (a[i] && a[i].username === a[j].username) a.splice(j--, 1)
           }
         }
@@ -872,13 +851,12 @@
     }
 
     function timestamp (selectedAccount) {
-      var passphrases = accountService.getPassphrases(selectedAccount.address)
-      var data = {
+      const data = {
         ledger: selectedAccount.ledger,
         fromAddress: selectedAccount ? selectedAccount.address : '',
         secondSignature: selectedAccount ? selectedAccount.secondSignature : '',
-        passphrase: passphrases[0] ? passphrases[0] : '',
-        secondpassphrase: passphrases[1] ? passphrases[1] : ''
+        passphrase: '',
+        secondpassphrase: ''
       }
 
       function next () {
@@ -889,7 +867,7 @@
         }
 
         $mdDialog.hide()
-        var smartbridge = $scope.send.data.smartbridge
+        const smartbridge = $scope.send.data.smartbridge
         transactionBuilderService.createSendTransaction({
           ledger: selectedAccount.ledger,
           publicKey: selectedAccount.publicKey,
@@ -900,7 +878,7 @@
           masterpassphrase: $scope.send.data.passphrase,
           secondpassphrase: $scope.send.data.secondpassphrase
         }).then(
-          function (transaction) {
+          (transaction) => {
             showValidateTransaction(selectedAccount, transaction)
           },
           formatAndToastError
@@ -908,36 +886,27 @@
       }
 
       function openFile () {
-        var crypto = require('crypto')
-        var fs = require('fs')
+        const crypto = require('crypto')
+        const fs = require('fs')
 
-        require('electron').remote.dialog.showOpenDialog(function (fileNames) {
+        require('electron').remote.dialog.showOpenDialog((fileNames) => {
           if (fileNames === undefined) return
-          var fileName = fileNames[0]
-          var algo = 'sha256'
-          var shasum = crypto.createHash(algo)
+          const fileName = fileNames[0]
+          const algo = 'sha256'
+          const shasum = crypto.createHash(algo)
           $scope.send.data.filename = fileName
           $scope.send.data.smartbridge = 'Calculating signature....'
-          var s = fs.ReadStream(fileName)
+          const s = fs.ReadStream(fileName)
 
-          s.on('data', function (d) { shasum.update(d) })
-          s.on('end', function () {
-            var d = shasum.digest('hex')
+          s.on('data', (d) => { shasum.update(d) })
+          s.on('end', () => {
+            const d = shasum.digest('hex')
             $scope.send.data.smartbridge = d
           })
         })
       }
 
-      function cancel () {
-        $mdDialog.hide()
-      }
-
-      $scope.send = {
-        data: data,
-        openFile: openFile,
-        cancel: cancel,
-        next: next
-      }
+      $scope.send = { data, openFile, cancel, next }
 
       $mdDialog.show({
         parent: angular.element(document.getElementById('app')),
@@ -949,21 +918,21 @@
     }
 
     function sortObj (obj) {
-      return Object.keys(obj).sort(function (a, b) {
+      return Object.keys(obj).sort((a, b) => {
         return obj[a] - obj[b]
       })
     }
 
     function generateDarkTheme (themeName) {
-      var theme = themeName || self.network.theme
-      var properties = $mdThemingProvider.$get().THEMES[theme]
+      const theme = themeName || self.network.theme
+      let properties = $mdThemingProvider.$get().THEMES[theme]
       properties = properties || $mdThemingProvider.$get().THEMES['default']
 
-      var colors = properties.colors
-      var primary = colors.primary.name
-      var accent = colors.accent.name
-      var warn = colors.warn.name
-      var background = colors.background.name
+      const colors = properties.colors
+      const primary = colors.primary.name
+      const accent = colors.accent.name
+      const warn = colors.warn.name
+      const background = colors.background.name
 
       $mdThemingProvider.theme('dark')
         .primaryPalette(primary)
@@ -984,40 +953,40 @@
         return
       }
 
-      var vibrant = require('node-vibrant')
-      var materialPalette = $mdThemingProvider.$get().PALETTES
+      const vibrant = require('node-vibrant')
+      const materialPalette = $mdThemingProvider.$get().PALETTES
 
       // check if it's an image url
-      var regExp = /\(([^)]+)\)/
-      var match = self.network.background.match(regExp)
+      const regExp = /\(([^)]+)\)/
+      const match = self.network.background.match(regExp)
 
       if (!match) {
         callback(false) // eslint-disable-line standard/no-callback-literal
         return
       }
 
-      var url = _path.resolve(__dirname, match[1].replace(/'/g, ''))
+      const url = _path.resolve(__dirname, match[1].replace(/'/g, ''))
 
-      vibrant.from(url).getPalette(function (err, palette) {
+      vibrant.from(url).getPalette((err, palette) => {
         if (err || !palette.Vibrant) {
           callback(false) // eslint-disable-line standard/no-callback-literal
           return
         }
 
-        var vibrantRatio = {}
-        var darkVibrantRatio = {}
+        const vibrantRatio = {}
+        const darkVibrantRatio = {}
 
-        Object.keys(materialPalette).forEach(function (color) {
-          var vibrantDiff = vibrant.Util.hexDiff(materialPalette[color]['900']['hex'], palette.Vibrant.getHex())
+        Object.keys(materialPalette).forEach((color) => {
+          const vibrantDiff = vibrant.Util.hexDiff(materialPalette[color]['900']['hex'], palette.Vibrant.getHex())
           vibrantRatio[color] = vibrantDiff
 
-          var darkVibrantDiff = vibrant.Util.hexDiff(materialPalette[color]['900']['hex'], palette.DarkVibrant.getHex())
+          const darkVibrantDiff = vibrant.Util.hexDiff(materialPalette[color]['900']['hex'], palette.DarkVibrant.getHex())
           darkVibrantRatio[color] = darkVibrantDiff
         })
 
-        var isArkJpg = _path.basename(url) === 'Kapu1.jpg'
-        var primaryColor = isArkJpg ? 'red' : sortObj(darkVibrantRatio)[0]
-        var accentColor = sortObj(vibrantRatio)[0]
+        const isArkJpg = _path.basename(url) === 'Kapu1.jpg'
+        let primaryColor = isArkJpg ? 'red' : sortObj(darkVibrantRatio)[0]
+        let accentColor = sortObj(vibrantRatio)[0]
 
         primaryColor = primaryColor === 'grey' ? 'blue-grey' : primaryColor
 
@@ -1035,24 +1004,24 @@
     }
 
     function manageBackgrounds () {
-      var fs = require('fs')
-      var context = storageService.getContext()
+      const fs = require('fs')
+      const context = storageService.getContext()
 
-      var currentNetwork = networkService.getNetwork()
+      const currentNetwork = networkService.getNetwork()
 
-      var initialBackground = currentNetwork.background
-      var initialTheme = currentNetwork.theme
+      const initialBackground = currentNetwork.background
+      const initialTheme = currentNetwork.theme
 
-      var currentTheme = self.currentTheme
-      var initialThemeView = currentTheme
-      var initialDarkMode = currentNetwork.themeDark
+      let currentTheme = self.currentTheme
+      const initialThemeView = currentTheme
+      const initialDarkMode = currentNetwork.themeDark
 
-      var themes = reloadThemes()
+      const themes = reloadThemes()
       delete themes['dark']
 
-      var selectedTab = 0
+      const selectedTab = 0
 
-      var backgrounds = {
+      const backgrounds = {
         user: {},
         colors: {
           'Midnight': '#2c3e50',
@@ -1064,22 +1033,22 @@
         images: {}
       }
 
-      var imgPath = 'assets/images'
-      var assetsPath = _path.resolve(__dirname, imgPath)
+      const imgPath = 'assets/images'
+      const assetsPath = _path.resolve(__dirname, imgPath)
 
       // find files in directory with same key
-      for (var folder in backgrounds) {
+      for (const folder in backgrounds) {
         let fullPath = _path.resolve(assetsPath, folder)
 
         if (fs.existsSync(_path.resolve(fullPath))) { // check dir exists
-          var image = {}
-          fs.readdirSync(fullPath).forEach(function (file) {
-            var stat = fs.statSync(_path.join(fullPath, file)) // to prevent if directory
+          const image = {}
+          fs.readdirSync(fullPath).forEach((file) => {
+            const stat = fs.statSync(_path.join(fullPath, file)) // to prevent if directory
 
             if (stat.isFile() && isImage(file)) {
-              var url = _path.join(imgPath, folder, file) // ex: assets/images/textures/file.png
+              let url = _path.join(imgPath, folder, file) // ex: assets/images/textures/file.png
               url = url.replace(/\\/g, '/')
-              var name = _path.parse(file).name // remove extension
+              const name = _path.parse(file).name // remove extension
               image[name] = `url('${url}')`
             }
           })
@@ -1089,7 +1058,7 @@
 
       backgrounds['user'] = storageService.getGlobal('userBackgrounds') || {}
       for (let name in backgrounds['user']) {
-        var mathPath = backgrounds['user'][name].match(/\((.*)\)/)
+        const mathPath = backgrounds['user'][name].match(/\((.*)\)/)
         if (mathPath) {
           let filePath = mathPath[1].replace(/'/g, ``)
           let fullPath = _path.join(__dirname, filePath)
@@ -1101,7 +1070,7 @@
       }
 
       function upload () {
-        var options = {
+        const options = {
           title: 'Add Image',
           filters: [
             { name: 'Images', extensions: ['jpg', 'png', 'gif'] }
@@ -1109,24 +1078,25 @@
           properties: ['openFile']
         }
 
-        require('electron').remote.dialog.showOpenDialog(options, function (fileName) {
+        require('electron').remote.dialog.showOpenDialog(options, (fileName) => {
           if (fileName === undefined) return
           fileName = fileName[0]
 
-          var readStream = fs.createReadStream(fileName)
+          const readStream = fs.createReadStream(fileName)
           readStream.on('readable', () => {
-            toastService.success('Background Added Successfully!', 3000)
+            toastService.success(gettext('Background added successfully!'), 3000)
 
-            var userImages = backgrounds['user']
-            var url = fileName
+            const userImages = backgrounds['user']
+            let url = fileName
             url = url.replace(/\\/g, '/')
-            var name = _path.parse(fileName).name
+            const name = _path.parse(fileName).name
             userImages[name] = `url('${url}')`
 
             backgrounds['user'] = userImages
-          })
-          .on('error', (error) => {
+          }).on('error', (error) => {
             toastService.error(`Error Adding Background (reading): ${error}`, 3000)
+          }).on('error', (error) => {
+            toastService.error(gettextCatalog.getString('Error adding background:') + ' ' + error, 3000)
           })
         })
       }
@@ -1135,9 +1105,9 @@
         evt.preventDefault()
         evt.stopPropagation()
 
-        var file = image.substring(5, image.length - 2)
+        const file = image.substring(5, image.length - 2)
 
-        var name = _path.parse(file).name
+        const name = _path.parse(file).name
         delete backgrounds['user'][name]
 
         if (image === initialBackground) {
@@ -1146,11 +1116,11 @@
           selectBackground(initialBackground)
         }
 
-        toastService.success('Background Removed Successfully!', 3000)
+        toastService.success(gettext('Background removed successfully!'), 3000)
       }
 
       function isImage (file) {
-        var extension = _path.extname(file)
+        const extension = _path.extname(file)
         if (extension === '.jpg' || extension === '.png' || extension === '.gif') {
           return true
         }
@@ -1199,20 +1169,20 @@
       }
 
       $scope.send = {
-        cancel: cancel,
-        save: save,
+        cancel,
+        save,
         backgroundKeys: Object.keys(backgrounds),
-        backgrounds: backgrounds,
-        selectTheme: selectTheme,
+        backgrounds,
+        selectTheme,
         selectedTheme: initialTheme,
-        themes: themes,
-        selectBackground: selectBackground,
+        themes,
+        selectBackground,
         selectedBackground: initialBackground,
         darkMode: initialDarkMode,
-        toggleDark: toggleDark,
-        upload: upload,
-        deleteImage: deleteImage,
-        selectedTab: selectedTab
+        toggleDark,
+        upload,
+        deleteImage,
+        selectedTab
       }
 
       $mdDialog.show({
@@ -1230,63 +1200,89 @@
     }
 
     function manageNetworks () {
-      var networks = networkService.getNetworks()
+      let networks = networkService.getNetworks()
 
-      function save () {
-        // these are not needed as the createNetwork now rerender automatically
+      function save (networkName) {
         $mdDialog.hide()
-        for (var network in $scope.send.networks) {
-          networkService.setNetwork(network, $scope.send.networks[network])
-          self.listNetworks = networkService.getNetworks()
-        }
-      // window.location.reload()
+
+        const network = $scope.send.networks[networkName]
+        delete network.isUnsaved
+        networkService.setNetwork(networkName, network)
+        self.listNetworks = networkService.getNetworks()
       }
 
-      function cancel () {
-        $mdDialog.hide()
-      }
-
-      function refreshTabs () {
+      function refreshTabs (newNetwork) {
         // reload networks
-        networks = networkService.getNetworks()
-        self.listNetworks = networks
+        const refreshedNetworks = networkService.getNetworks()
+        if (newNetwork) {
+          refreshedNetworks[newNetwork.name] = newNetwork.network
+        }
         // add it back to the scope
-        $scope.send.networkKeys = Object.keys(networks)
-        $scope.send.networks = networks
-        // tell angular that the list changed
-        $scope.$apply()
+        $scope.send.networkKeys = Object.keys(refreshedNetworks)
+        $scope.send.networks = refreshedNetworks
       }
 
       function createNetwork () {
         networkService.createNetwork($scope.send.createnetwork).then(
-          function (network) {
-            refreshTabs()
+          (newNetwork) => {
+            refreshTabs(newNetwork)
           },
           formatAndToastError
         )
       }
 
       function removeNetwork (network) {
-        var confirm = $mdDialog.confirm()
-          .title(gettextCatalog.getString('Remove Network') + ' ' + network)
+        const isActive = network === networkService.getNetworkName()
+        const confirm = $mdDialog.confirm()
+          .title(gettextCatalog.getString('Remove network \'{{ network }}\'', {network: network}))
           .theme(self.currentTheme)
           .textContent(gettextCatalog.getString('Are you sure you want to remove this network and all data (accounts and settings) associated with it from your computer. Your accounts are still safe on the blockchain.'))
           .ok(gettextCatalog.getString('Remove from my computer all cached data from this network'))
           .cancel(gettextCatalog.getString('Cancel'))
-        $mdDialog.show(confirm).then(function () {
+        $mdDialog.show(confirm).then(() => {
           networkService.removeNetwork(network)
-          self.listNetworks = networkService.getNetworks()
-          toastService.success('Network removed succesfully!', 3000)
+          if (isActive) {
+            $mdDialog.show({
+              parent: angular.element(document.getElementById('app')),
+              templateUrl: './src/accounts/view/switchNetworkDialog.html',
+              clickOutsideToClose: false,
+              escapeToClose: false,
+              fullscreen: true,
+              locals: {
+                networkName: network,
+                switchNetwork: () => networkService.switchNetwork(null, true),
+                theme: self.currentTheme
+              },
+              controller: ['$scope', 'networkName', 'switchNetwork', 'theme', ($scope, networkName, switchNetwork, theme) => {
+                $scope.networkName = networkName
+                $scope.switchNetwork = switchNetwork
+                $scope.theme = theme
+              }]
+            })
+          } else {
+            self.listNetworks = networkService.getNetworks()
+            toastService.success(gettext('Network removed successfully!'), 3000)
+          }
         })
       }
 
+      let activeNetworkIndex = 0
+      const activeNetworkName = networkService.getNetworkName()
+      const networkKeys = Object.keys(networks).map((networkName, index) => {
+        if (networkName === activeNetworkName) {
+          activeNetworkIndex = index
+        }
+        return networkName
+      })
+
       $scope.send = {
-        networkKeys: Object.keys(networks),
-        networks: networks,
-        createNetwork: createNetwork,
-        removeNetwork: removeNetwork,
-        cancel: cancel,
-        save: save
+        networkKeys,
+        networks,
+        activeNetworkIndex,
+        createNetwork,
+        removeNetwork,
+        cancel,
+        save
       }
 
       $mdDialog.show({
@@ -1299,55 +1295,21 @@
       })
     }
 
-    function openPassphrasesDialog (selectedAccount) {
-      var passphrases = accountService.getPassphrases(selectedAccount.address)
-      var data = { address: selectedAccount.address, passphrase: passphrases[0], secondpassphrase: passphrases[1] }
-
-      function save () {
-        $mdDialog.hide()
-        accountService.savePassphrases($scope.send.data.address, $scope.send.data.passphrase, $scope.send.data.secondpassphrase).then(
-          function (account) {
-            toastService.success('Passphrases saved')
-          },
-          formatAndToastError
-        )
-      }
-
-      function cancel () {
-        $mdDialog.hide()
-      }
-
-      $scope.send = {
-        data: data,
-        cancel: cancel,
-        save: save
-      }
-
-      $mdDialog.show({
-        parent: angular.element(document.getElementById('app')),
-        templateUrl: './src/accounts/view/savePassphrases.html',
-        clickOutsideToClose: false,
-        preserveScope: true,
-        scope: $scope
-      })
-    }
-
     // register as delegate
     function createDelegate (selectedAccount) {
-      var passphrases = accountService.getPassphrases(selectedAccount.address)
-      var data = {
+      const data = {
         ledger: selectedAccount.ledger,
         fromAddress: selectedAccount.address,
         username: '',
         secondSignature: selectedAccount.secondSignature,
-        passphrase: passphrases[0] ? passphrases[0] : '',
-        secondpassphrase: passphrases[1] ? passphrases[1] : ''
+        passphrase: '',
+        secondpassphrase: ''
       }
 
       function next () {
         $mdDialog.hide()
 
-        var delegateName
+        let delegateName
         try {
           delegateName = accountService.sanitizeDelegateName($scope.createDelegate.data.username)
         } catch (error) {
@@ -1362,22 +1324,14 @@
           masterpassphrase: $scope.createDelegate.data.passphrase,
           secondpassphrase: $scope.createDelegate.data.secondpassphrase
         }).then(
-          function (transaction) {
+          (transaction) => {
             showValidateTransaction(selectedAccount, transaction)
           },
           formatAndToastError
         )
       }
 
-      function cancel () {
-        $mdDialog.hide()
-      }
-
-      $scope.createDelegate = {
-        data: data,
-        cancel: cancel,
-        next: next
-      }
+      $scope.createDelegate = { data, cancel, next }
 
       $mdDialog.show({
         parent: angular.element(document.getElementById('app')),
@@ -1391,8 +1345,8 @@
     // Create a new cold account
     // TODO Used in dashboard navbar and accountBox
     function createAccount () {
-      var bip39 = require('bip39')
-      var data = { passphrase: bip39.generateMnemonic() }
+      const bip39 = require('bip39')
+      const data = { passphrase: bip39.generateMnemonic() }
 
       function next () {
         if (!$scope.createAccountDialog.data.showRepassphrase) {
@@ -1404,12 +1358,12 @@
             return
           }
 
-          var words = $scope.createAccountDialog.data.repassphrase.split(' ')
+          const words = $scope.createAccountDialog.data.repassphrase.split(' ')
           if ($scope.createAccountDialog.data.word3 === words[2] && $scope.createAccountDialog.data.word6 === words[5] && $scope.createAccountDialog.data.word9 === words[8]) {
-            accountService.createAccount($scope.createAccountDialog.data.repassphrase).then(function (account) {
+            accountService.createAccount($scope.createAccountDialog.data.repassphrase).then((account) => {
               self.accounts.push(account)
               toastService.success(
-                gettextCatalog.getString('Account successfully created: ') + account.address,
+                gettextCatalog.getString('Account \'{{ address }}\' successfully created!', {address: account.address}),
                 null,
                 true
               )
@@ -1422,23 +1376,7 @@
         }
       }
 
-      function querySearch (text) { // eslint-disable-line no-unused-vars
-        text = text.toLowerCase()
-        var filter = self.accounts.filter(function (account) {
-          return (account.address.toLowerCase().indexOf(text) > -1) || (account.username && (account.username.toLowerCase().indexOf(text) > -1))
-        })
-        return filter
-      }
-
-      function cancel () {
-        $mdDialog.hide()
-      }
-
-      $scope.createAccountDialog = {
-        data: data,
-        cancel: cancel,
-        next: next
-      }
+      $scope.createAccountDialog = { data, cancel, next }
 
       $mdDialog.show({
         parent: angular.element(document.getElementById('app')),
@@ -1451,7 +1389,7 @@
 
     // TODO Used in dashboard navbar and accountBox
     function importAccount () {
-      var data = {
+      const data = {
         passphrase: ''
       // TODO second passphrase
       // secondpassphrase: ''
@@ -1464,7 +1402,7 @@
 
         if (!$scope.send.data.customPassphrase && !isBIP39($scope.send.data.passphrase)) {
           toastService.error(
-            gettextCatalog.getString('Not valid BIP39 passphrase! Please check all words and spaces.')
+            gettextCatalog.getString('Not a valid BIP39 passphrase! Please check all words and spaces.')
             , null
             , true
           )
@@ -1473,12 +1411,13 @@
 
         accountService.createAccount($scope.send.data.passphrase)
           .then(
-            function (account) {
+            (account) => {
               // Check for already imported account
-              for (var i = 0; i < self.accounts.length; i++) {
+              for (let i = 0; i < self.accounts.length; i++) {
                 if (self.accounts[i].address === account.address) {
                   toastService.error(
-                    gettextCatalog.getString('Account was already imported: ') + account.address,
+                    gettextCatalog.getString('Account \'{{ address }}\' has already been imported!',
+                                             {address: account.address}),
                     null,
                     true
                   )
@@ -1488,27 +1427,19 @@
 
               self.accounts.push(account)
               toastService.success(
-                gettextCatalog.getString('Account successfully imported: ') + account.address,
+                gettextCatalog.getString('Account \'{{ address }}\' successfully imported!',
+                                         {address: account.address}),
                 null,
                 true
               )
               selectAccount(account)
             // TODO save passphrases after we have local encrytion
             },
-            formatAndToastError
-        )
+            formatAndToastError)
         $mdDialog.hide()
       }
 
-      function cancel () {
-        $mdDialog.hide()
-      }
-
-      $scope.send = {
-        data: data,
-        cancel: cancel,
-        save: save
-      }
+      $scope.send = { data, cancel, save }
 
       $mdDialog.show({
         parent: angular.element(document.getElementById('app')),
@@ -1533,43 +1464,39 @@
 
     // Add a second passphrase to an account
     function createSecondPassphrase (selectedAccount) {
-      var bip39 = require('bip39')
-      var data = { secondPassphrase: bip39.generateMnemonic() }
+      const bip39 = require('bip39')
+      const data = { secondPassphrase: bip39.generateMnemonic() }
 
       if (selectedAccount.secondSignature) {
         return formatAndToastError(
-          gettextCatalog.getString('This account already has a second passphrase: ' + selectedAccount.address)
+          gettextCatalog.getString('The account \'{{ address }}\' already has a second passphrase!', {address: selectedAccount.address})
         )
       }
 
       function warnAboutSecondPassphraseFee () {
-        accountService.getFees(true).then(
-              function (fees) {
-                let secondPhraseArktoshiVal = fees['secondsignature']
-                var secondPhraseArkVal = utilityService.arktoshiToArk(secondPhraseArktoshiVal, true)
-                var confirm = $mdDialog.confirm({
-                  title: gettextCatalog.getString('Second Passphrase') + ' ' + gettextCatalog.getString('Fee') + ' (' + networkService.getNetwork().symbol + ')',
-                  secondPhraseArkVal: secondPhraseArkVal,
-                  textContent: gettextCatalog.getString('WARNING! Second passphrase creation costs ' + secondPhraseArkVal + ' ' + networkService.getNetwork().token + '.'),
-                  ok: gettextCatalog.getString('Continue'),
-                  cancel: gettextCatalog.getString('Cancel')
-                })
+        accountService.getFees(true).then((fees) => {
+          const secondPhraseArktoshiVal = fees['secondsignature']
+          const secondPhraseArkVal = utilityService.arktoshiToArk(secondPhraseArktoshiVal, true)
+          const confirm = $mdDialog.confirm({
+            title: gettextCatalog.getString('Second Passphrase fee ({{ currency }})', {currency: networkService.getNetwork().symbol}),
+            secondPhraseArkVal: secondPhraseArkVal,
+            textContent: gettextCatalog.getString('WARNING! Second passphrase creation costs {{ cost }} {{ currency }}',
+                                                  {cost: secondPhraseArkVal, currency: networkService.getNetwork().token}),
+            ok: gettextCatalog.getString('Continue'),
+            cancel: gettextCatalog.getString('Cancel')
+          })
 
-                $mdDialog.show(confirm)
-                      .then(function () {
-                        $mdDialog.show({
-                          parent: angular.element(document.getElementById('app')),
-                          templateUrl: './src/accounts/view/createSecondPassphrase.html',
-                          clickOutsideToClose: false,
-                          preserveScope: true,
-                          scope: $scope
-                        })
-                      }, function () {
-                        cancel()
-                      }
-                    )
-              }
-          )
+          $mdDialog.show(confirm)
+            .then(() => {
+              $mdDialog.show({
+                parent: angular.element(document.getElementById('app')),
+                templateUrl: './src/accounts/view/createSecondPassphrase.html',
+                clickOutsideToClose: false,
+                preserveScope: true,
+                scope: $scope
+              })
+            }, () => cancel())
+        })
       }
 
       warnAboutSecondPassphraseFee()
@@ -1587,7 +1514,7 @@
             masterpassphrase: $scope.createSecondPassphraseDialog.data.passphrase,
             secondpassphrase: $scope.createSecondPassphraseDialog.data.reSecondPassphrase
           }).then(
-            function (transaction) {
+            (transaction) => {
               showValidateTransaction(selectedAccount, transaction)
             },
             formatAndToastError
@@ -1596,15 +1523,7 @@
         }
       }
 
-      function cancel () {
-        $mdDialog.hide()
-      }
-
-      $scope.createSecondPassphraseDialog = {
-        data: data,
-        cancel: cancel,
-        next: next
-      }
+      $scope.createSecondPassphraseDialog = { data, cancel, next }
     }
 
     function loadSignedMessages () {
@@ -1613,18 +1532,18 @@
 
     function showValidateTransaction (selectedAccount, transaction, cb) {
       function saveFile () {
-        var fs = require('fs')
-        var raw = JSON.stringify(transaction)
+        const fs = require('fs')
+        const raw = JSON.stringify(transaction)
 
         require('electron').remote.dialog.showSaveDialog({
           defaultPath: transaction.id + '.json',
           filters: [{
             extensions: ['json']
           }]
-        }, function (fileName) {
+        }, fileName => {
           if (fileName === undefined) return
 
-          fs.writeFile(fileName, raw, 'utf8', function (err) {
+          fs.writeFile(fileName, raw, 'utf8', (err) => {
             if (err) {
               toastService.error(
                 gettextCatalog.getString('Failed to save transaction file') + ': ' + err,
@@ -1633,7 +1552,7 @@
               )
             } else {
               toastService.success(
-                gettextCatalog.getString('Transaction file successfully saved in') + ' ' + fileName,
+                gettextCatalog.getString('Transaction file successfully saved in \'{{ fileName }}\'.', {fileName: fileName}),
                 null,
                 true
               )
@@ -1642,6 +1561,8 @@
         })
       }
 
+      const transactionLabel = accountService.getTransactionLabel(transaction)
+
       function send () {
         $mdDialog.hide()
 
@@ -1649,10 +1570,10 @@
         transaction.confirmations = 0
 
         networkService.postTransaction(transaction).then(
-          function (transaction) {
+          (transaction) => {
             selectedAccount.transactions.unshift(transaction)
             toastService.success(
-              gettextCatalog.getString('Transaction') + ' ' + transaction.id + ' ' + gettextCatalog.getString('sent with success!'),
+              gettextCatalog.getString('Transaction \'{{ transactionId }}\' sent with success!', {transactionId: transaction.id}),
               null,
               true
             )
@@ -1661,36 +1582,39 @@
               cb(transaction)
             }
           },
-          formatAndToastError
-        )
-      }
-
-      function cancel () {
-        $mdDialog.hide()
+         (error) => {
+           formatAndToastError({
+             message: gettextCatalog.getString('Failed to execute your \'{{ transactionLabel }}\' transaction!',
+                                               {transactionLabel: transactionLabel}),
+             error: error
+           })
+         })
       }
 
       $scope.validate = {
-        saveFile: saveFile,
-        send: send,
-        cancel: cancel,
-        transaction: transaction,
-        label: accountService.getTransactionLabel(transaction),
+        saveFile,
+        send,
+        cancel,
+        transaction,
+        label: transactionLabel,
         // to avoid small transaction to be displayed as 1e-8
-        humanAmount: utilityService.arktoshiToArk(transaction.amount).toString(),
-        totalAmount: utilityService.arktoshiToArk(parseFloat(transaction.amount) + transaction.fee, true).toString()
+        humanAmount: utilityService.arktoshiToArk(transaction.amount),
+        totalAmount: utilityService.arktoshiToArk(parseFloat(transaction.amount) + transaction.fee, true)
       }
 
-      $mdDialog.show({
+      const contacts = self.searchContactOrAccount(transaction.recipientId, true)
+      if (contacts && contacts.length === 1) {
+        $scope.validate.resolvedAccount = contacts[0]
+      }
+
+      dialogService.open({
         scope: $scope,
-        preserveScope: true,
-        parent: angular.element(document.getElementById('app')),
-        templateUrl: './src/accounts/view/validateTransactionDialog.html',
-        clickOutsideToClose: false
+        templateUrl: './src/accounts/view/validateTransactionDialog.html'
       })
     }
 
     function isBIP39 (mnemonic) {
-      var bip39 = require('bip39')
+      const bip39 = require('bip39')
       let valid = bip39.validateMnemonic(mnemonic)
       return valid
     }
