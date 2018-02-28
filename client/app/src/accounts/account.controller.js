@@ -264,7 +264,7 @@
         ledgerService.getBip44Accounts(self.network.slip44).then(
           (accounts) => {
             self.ledgerAccounts = accounts
-            self.ledger.conneted = true
+            self.ledger.connected = true
             nocall = false
           },
           () => {

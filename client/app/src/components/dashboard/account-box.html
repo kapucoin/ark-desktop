@@ -31,7 +31,7 @@
 </md-toolbar>
 <div style="min-height: 100px; max-height: 304px; height: auto; border-radius:0 0 10px 10px" layout="column" >
     <md-list md-no-ink>
-      <md-list-item ng-click="$ctrl.ac.selectLedgerAccount()" ng-if="$ctrl.ac.ledger.connected && ctrl.selectedAccountType === $ctrl.myAccountsType">
+      <md-list-item ng-click="$ctrl.ac.selectLedgerAccount()" ng-if="$ctrl.ac.ledger.connected && $ctrl.selectedAccountType === $ctrl.myAccountsType">
         <span>
           <md-icon md-svg-icon="ledger"></md-icon>
           Ledger Nano S
