@@ -5,7 +5,7 @@
     .service('transactionBuilderService', ['$timeout', '$q', 'networkService', 'accountService', 'ledgerService', 'gettextCatalog', 'utilityService', TransactionBuilderService])
 
   function TransactionBuilderService ($timeout, $q, networkService, accountService, ledgerService, gettextCatalog, utilityService) {
-    const kapu = require(require('path').resolve(__dirname, '../node_modules/kapujs'))
+    const kapujs = require(require('path').resolve(__dirname, '../node_modules/kapujs'))
 
     function createTransaction (deferred, config, fee, createTransactionFunc, setAdditionalTransactionPropsOnLedger) {
       let transaction
@@ -28,7 +28,7 @@
         ledgerService.signTransaction(config.ledger, transaction)
           .then(({ signature }) => {
             transaction.signature = signature
-            transaction.id = kapu.crypto.getId(transaction)
+            transaction.id = kapujs.crypto.getId(transaction)
             deferred.resolve(transaction)
           })
           .catch(error => {
@@ -39,7 +39,7 @@
         return
       }
 
-      if (kapu.crypto.getAddress(transaction.senderPublicKey, networkService.getNetwork().version) !== config.fromAddress) {
+      if (kapujs.crypto.getAddress(transaction.senderPublicKey, networkService.getNetwork().version) !== config.fromAddress) {
         deferred.reject(gettextCatalog.getString('Passphrase is not corresponding to account \'{{ address }}\'', {address: config.fromAddress}))
         return
       }
@@ -71,7 +71,7 @@
         createTransaction(deferred,
                           config,
                           fees.send,
-                          () => kapu.transaction.createTransaction(config.toAddress,
+                          () => kapujs.transaction.createTransaction(config.toAddress,
                                                                   config.amount,
                                                                   config.smartbridge,
                                                                   config.masterpassphrase,
@@ -92,7 +92,7 @@
       return new Promise((resolve, reject) => {
         accountService.getFees(false).then(fees => {
           const invalidAddress = transactions.find(t => {
-            return !kapu.crypto.validateAddress(t.address, network.version)
+            return !kapujs.crypto.validateAddress(t.address, network.version)
           })
 
           if (invalidAddress) {
@@ -113,7 +113,7 @@
           const processed = Promise.all(
             transactions.map(({ address, amount, smartbridge }, i) => {
               return new Promise((resolve, reject) => {
-                const transaction = kapu.transaction.createTransaction(address, amount, smartbridge, masterpassphrase, secondpassphrase, undefined, fees.send)
+                const transaction = kapujs.transaction.createTransaction(address, amount, smartbridge, masterpassphrase, secondpassphrase, undefined, fees.send)
 
                 transaction.fee = fees.send
                 transaction.senderId = fromAddress
@@ -127,7 +127,7 @@
                     ledgerService.signTransaction(ledger, transaction)
                       .then(({ signature }) => {
                         transaction.signature = signature
-                        transaction.id = kapu.crypto.getId(transaction)
+                        transaction.id = kapujs.crypto.getId(transaction)
                         resolve(transaction)
                       })
                       .catch(error => {
@@ -136,7 +136,7 @@
                       })
                   }, 2000 * i, true, transaction)
                 } else {
-                  if (kapu.crypto.getAddress(transaction.senderPublicKey, network.version) !== fromAddress) {
+                  if (kapujs.crypto.getAddress(transaction.senderPublicKey, network.version) !== fromAddress) {
                     return reject(new Error(gettextCatalog.getString('Passphrase is not corresponding to account \'{{ address }}\'', {address: fromAddress})))
                   }
 
@@ -170,7 +170,7 @@
         createTransaction(deferred,
                           config,
                           fees.secondsignature,
-                          () => kapu.signature.createSignature(config.masterpassphrase, config.secondpassphrase, fees.secondsignature))
+                          () => kapujs.signature.createSignature(config.masterpassphrase, config.secondpassphrase, fees.secondsignature))
       })
     }
 
@@ -191,7 +191,7 @@
         createTransaction(deferred,
                           config,
                           fees.delegate,
-                          () => kapu.delegate.createDelegate(config.masterpassphrase, config.username, config.secondpassphrase, fees.delegate))
+                          () => kapujs.delegate.createDelegate(config.masterpassphrase, config.username, config.secondpassphrase, fees.delegate))
       })
     }
 
@@ -212,7 +212,7 @@
         createTransaction(deferred,
                           config,
                           fees.vote,
-                          () => kapu.vote.createVote(config.masterpassphrase, config.publicKeys.split(','), config.secondpassphrase, fees.vote),
+                          () => kapujs.vote.createVote(config.masterpassphrase, config.publicKeys.split(','), config.secondpassphrase, fees.vote),
                           (transaction) => { transaction.recipientId = config.fromAddress })
       })
     }

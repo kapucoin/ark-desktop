@@ -59,6 +59,7 @@
     "csv-parse": "^2.0.0",
     "electron-window-state": "^4.1.1",
     "elemon": "^5.0.3",
+    "kapujs": "^0.2.4",
     "ledgerco": "github:ledgerhq/ledger-node-js-api#6cde5978b9d0a4922f0d33520b16cc2184559ebc",
     "moment-range": "^3.1.0",
     "moment-timezone": "^0.5.14",
@@ -105,8 +106,11 @@
       "category": "finance"
     },
     "win": {
-     "target": ["nsis", "portable"],
-     "icon": "build/icon.ico"
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/icon.ico"
     },
     "linux": {
       "description": "A Lite Client used to securely connect to the Kapu network and manage your Kapu assets.",
@@ -124,15 +128,15 @@
       "icon": "build/icon.icns"
     },
     "nsis": {
-     "artifactName": "${productName}-${os}Installer${arch}.${version}.${ext}",
-     "installerIcon": "build/icon.ico",
-     "uninstallerIcon": "build/icon.ico",
-     "installerHeaderIcon": "build/icon.ico",
-     "oneClick": false,
-     "allowToChangeInstallationDirectory": "true",
-     "createDesktopShortcut": "true",
-     "runAfterFinish": "true",
-     "perMachine": false
+      "artifactName": "${productName}-${os}Installer${arch}.${version}.${ext}",
+      "installerIcon": "build/icon.ico",
+      "uninstallerIcon": "build/icon.ico",
+      "installerHeaderIcon": "build/icon.ico",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": "true",
+      "createDesktopShortcut": "true",
+      "runAfterFinish": "true",
+      "perMachine": false
     },
     "portable": {
       "artifactName": "${productName}-${os}${arch}.${version}.${ext}"
