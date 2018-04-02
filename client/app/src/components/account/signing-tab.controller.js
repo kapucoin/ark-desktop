@@ -50,7 +50,7 @@
         }
 
         promisedSignature.then(
-          function (result) {
+          (result) => {
             selectedAccount.signedMessages.push({
               publickey: selectedAccount.publicKey,
               signature: result.signature,
@@ -59,8 +59,8 @@
             storageService.set('signed-' + selectedAccount.address, selectedAccount.signedMessages)
             $mdDialog.hide()
           },
-          function (error) {
-            accountCtrl.showMessage(error)  // eslint-disable-line no-undef
+          (error) => {
+            accountCtrl.showMessage(error) // eslint-disable-line no-undef
           }
         )
       }
@@ -69,10 +69,8 @@
         $mdDialog.hide()
       }
 
-      const passphrases = accountService.getPassphrases(selectedAccount.address)
-
       $scope.sign = {
-        passphrase: passphrases[0] ? passphrases[0] : '',
+        passphrase: '',
         sign,
         cancel,
         selectedAccount
