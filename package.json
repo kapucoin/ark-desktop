@@ -1,6 +1,6 @@
 {
   "name": "KapuClient",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "productName": "KapuClient",
   "description": "Kapu Desktop Wallet",
   "main": "main.js",
@@ -59,7 +59,7 @@
     "csv-parse": "^2.0.0",
     "electron-window-state": "^4.1.1",
     "elemon": "^5.0.3",
-    "kapujs": "^0.2.4",
+    "kapujs": "^0.2.6",
     "ledgerco": "github:ledgerhq/ledger-node-js-api#6cde5978b9d0a4922f0d33520b16cc2184559ebc",
     "moment-range": "^3.1.0",
     "moment-timezone": "^0.5.14",

@@ -182,7 +182,7 @@ var numeral = require('numeral');
         .then((res) => {
           kapuMarketData[0].price_usd = (res.data[0].price_usd * kapuMarketData[0].price_btc).toFixed(5)
           kapuMarketData[0].price_eur = (res.data[0].price_eur * kapuMarketData[0].price_btc).toFixed(5)
-          $http.get('https://walletapi.kapu.one/api/blocks/getSupply', { timeout: 2000 }).then(function (resp) {
+          $http.get('https://145.239.90.228:4600/api/blocks/getSupply', { timeout: 2000 }).then(function (resp) {
             if (resp != null) {
               /*
                 Update/retrieve coin supplly value
